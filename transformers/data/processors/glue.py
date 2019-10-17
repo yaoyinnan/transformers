@@ -86,7 +86,6 @@ def glue_convert_examples_to_features(examples, tokenizer,
             example.text_b,
             add_special_tokens=True,
             max_length=max_length,
-            truncate_first_sequence=True  # We're truncating the first sequence in priority
         )
         input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
 
@@ -106,10 +105,8 @@ def glue_convert_examples_to_features(examples, tokenizer,
             token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
 
         assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
-        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),
-                                                                                            max_length)
-        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),
-                                                                                            max_length)
+        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask), max_length)
+        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids), max_length)
 
         if output_mode == "classification":
             label = label_map[example.label]
@@ -127,28 +124,28 @@ def glue_convert_examples_to_features(examples, tokenizer,
             logger.info("label: %s (id = %d)" % (example.label, label))
 
         features.append(
-            InputFeatures(input_ids=input_ids,
-                          attention_mask=attention_mask,
-                          token_type_ids=token_type_ids,
-                          label=label))
+                InputFeatures(input_ids=input_ids,
+                              attention_mask=attention_mask,
+                              token_type_ids=token_type_ids,
+                              label=label))
 
     if is_tf_available() and is_tf_dataset:
         def gen():
             for ex in features:
-                yield ({'input_ids': ex.input_ids,
-                        'attention_mask': ex.attention_mask,
-                        'token_type_ids': ex.token_type_ids},
-                       ex.label)
+                yield  ({'input_ids': ex.input_ids,
+                         'attention_mask': ex.attention_mask,
+                         'token_type_ids': ex.token_type_ids},
+                        ex.label)
 
         return tf.data.Dataset.from_generator(gen,
-                                              ({'input_ids': tf.int32,
-                                                'attention_mask': tf.int32,
-                                                'token_type_ids': tf.int32},
-                                               tf.int64),
-                                              ({'input_ids': tf.TensorShape([None]),
-                                                'attention_mask': tf.TensorShape([None]),
-                                                'token_type_ids': tf.TensorShape([None])},
-                                               tf.TensorShape([])))
+            ({'input_ids': tf.int32,
+              'attention_mask': tf.int32,
+              'token_type_ids': tf.int32},
+             tf.int64),
+            ({'input_ids': tf.TensorShape([None]),
+              'attention_mask': tf.TensorShape([None]),
+              'token_type_ids': tf.TensorShape([None])},
+             tf.TensorShape([])))
 
     return features
 
