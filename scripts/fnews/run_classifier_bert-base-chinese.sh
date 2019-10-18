@@ -8,7 +8,7 @@ export MODEL_NAME=bert-base-chinese
 export STAGE_NUM=2-2
 export NEXT_STAGE_NUM=3-4
 
-python ./examples/run_fnews.py \
+python ./examples/run_classifier.py \
     --model_type ${MODEL} \
     --model_name_or_path ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
     --task_name ${TASK_NAME} \

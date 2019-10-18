@@ -9,7 +9,7 @@ export MODEL_NAME=xlnet-base-chinese
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=2
 
-python ./examples/run_fnews.py \
+python ./examples/run_classifier.py \
     --model_type ${MODEL} \
     --model_name_or_path ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
     --task_name ${TASK_NAME} \

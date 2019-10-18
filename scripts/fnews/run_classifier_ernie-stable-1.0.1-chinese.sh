@@ -9,7 +9,7 @@ export MODEL_NAME=ernie-stable-1.0.1-chinese
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=2
 
-python ./examples/run_fnews.py \
+python ./examples/run_classifier.py \
     --model_type ${MODEL} \
     --model_name_or_path ${MODEL_PATH}/${MODEL_NAME} \
     --task_name ${TASK_NAME} \
