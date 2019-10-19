@@ -100,7 +100,6 @@ def my_convert_examples_to_features(examples,
             example.text_b,
             add_special_tokens=True,
             max_length=max_length,
-            truncate_first_sequence=True  # We're truncating the first sequence in priority
         )
         input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
 
@@ -221,7 +220,7 @@ class FnewsProcessor(DataProcessor):
         return examples
 
 
-class OffensEvalProcessor(DataProcessor):
+class OffensEvalProcessorTask1(DataProcessor):
     """Processor for the Fnews data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
@@ -241,14 +240,14 @@ class OffensEvalProcessor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
-    def get_predict_examples(self, data_dir):
-        """See base class."""
-        return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+    # def get_predict_examples(self, data_dir):
+    #     """See base class."""
+    #     return self._create_examples(
+    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
 
     def get_labels(self):
         """See base class."""
-        return ["-1", "0", "1"]
+        return ["OFF", "NOT"]
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -261,25 +260,25 @@ class OffensEvalProcessor(DataProcessor):
                 text_a = line[1]
                 label = line[0]
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "predict":
-                guid = line[0]
-                text_a = line[1]
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            # elif set_type == "predict":
+            #     guid = line[0]
+            #     text_a = line[1]
+            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
 
         return examples
 
 
 my_tasks_num_labels = {
     "fnews": 2,
-    "offenseval": 3,
+    "offensevaltask1": 2,
 }
 
 my_processors = {
     "fnews": FnewsProcessor,
-    "offenseval": OffensEvalProcessor,
+    "offensevaltask1": OffensEvalProcessorTask1,
 }
 
 my_output_modes = {
     "fnews": "classification",
-    "offenseval": "classification",
+    "offensevaltask1": "classification",
 }

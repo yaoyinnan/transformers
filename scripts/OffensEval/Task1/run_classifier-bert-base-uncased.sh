@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval
-export TASK_NAME=OffensEval
+export DATA_DIR=data/OffensEval/Task1
+export TASK_NAME=OffensEvalTask1
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert
@@ -20,9 +20,9 @@ python ./examples/run_classifier.py \
     --per_gpu_train_batch_size 8   \
     --per_gpu_eval_batch_size 8   \
     --per_gpu_predict_batch_size 8   \
-    --learning_rate 5e-5 \
+    --learning_rate 1e-4 \
     --weight_decay 0.0001 \
-    --num_train_epochs 8.0 \
+    --num_train_epochs 5.0 \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME} \
     --save_steps 1000 \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
+#    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv

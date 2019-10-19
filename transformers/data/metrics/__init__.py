@@ -42,7 +42,7 @@ if _has_sklearn:
 
     def acc_and_f1(preds, labels):
         acc = simple_accuracy(preds, labels)
-        f1 = f1_score(y_true=labels, y_pred=preds)
+        f1 = f1_score(y_true=labels, y_pred=preds, average='micro')
         return {
             "acc": acc,
             "f1": f1,
@@ -97,6 +97,6 @@ if _has_sklearn:
         if task_name == "fnews":
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "offenseval":
-            return f1(preds, labels)
+            return acc_and_f1(preds, labels)
         else:
             raise KeyError(task_name)
