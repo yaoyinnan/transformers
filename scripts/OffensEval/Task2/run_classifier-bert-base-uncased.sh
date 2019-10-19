@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval/Task1
-export TASK_NAME=OffensEvalTask1
+export DATA_DIR=data/OffensEval/Task2
+export TASK_NAME=OffensEvalTask2
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert

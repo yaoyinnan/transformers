@@ -40,7 +40,7 @@ if _has_sklearn:
         return (preds == labels).mean()
 
 
-    def acc_and_f1(preds, labels):
+    def acc_and_f1_micro(preds, labels):
         acc = simple_accuracy(preds, labels)
         f1 = f1_score(y_true=labels, y_pred=preds, average='micro')
         return {
@@ -49,10 +49,14 @@ if _has_sklearn:
             "acc_and_f1": (acc + f1) / 2,
         }
 
-    def f1(preds, labels):
-        f1 = f1_score(y_true=labels, y_pred=preds, average='micro')
-        return{
+
+    def acc_and_f1_macro(preds, labels):
+        acc = simple_accuracy(preds, labels)
+        f1 = f1_score(y_true=labels, y_pred=preds, average='macro')
+        return {
+            "acc": acc,
             "f1": f1,
+            "acc_and_f1": (acc + f1) / 2,
         }
 
 
@@ -73,11 +77,11 @@ if _has_sklearn:
         elif task_name == "sst-2":
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "mrpc":
-            return acc_and_f1(preds, labels)
+            return acc_and_f1_micro(preds, labels)
         elif task_name == "sts-b":
             return pearson_and_spearman(preds, labels)
         elif task_name == "qqp":
-            return acc_and_f1(preds, labels)
+            return acc_and_f1_micro(preds, labels)
         elif task_name == "mnli":
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "mnli-mm":
@@ -96,7 +100,11 @@ if _has_sklearn:
         assert len(preds) == len(labels)
         if task_name == "fnews":
             return {"acc": simple_accuracy(preds, labels)}
-        elif task_name == "offenseval":
-            return acc_and_f1(preds, labels)
+        elif task_name == "offensevaltask1":
+            return acc_and_f1_macro(preds, labels)
+        elif task_name == "offensevaltask2":
+            return acc_and_f1_macro(preds, labels)
+        elif task_name == "offensevaltask3":
+            return acc_and_f1_macro(preds, labels)
         else:
             raise KeyError(task_name)
