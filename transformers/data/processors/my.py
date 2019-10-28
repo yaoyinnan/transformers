@@ -220,7 +220,7 @@ class FnewsProcessor(DataProcessor):
         return examples
 
 
-class OffensEvalProcessorTask1(DataProcessor):
+class OffensEvalTask1Processor(DataProcessor):
     """Processor for the Fnews data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
@@ -268,7 +268,7 @@ class OffensEvalProcessorTask1(DataProcessor):
         return examples
 
 
-class OffensEvalProcessorTask2(DataProcessor):
+class OffensEvalTask2Processor(DataProcessor):
     """Processor for the Fnews data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
@@ -316,7 +316,7 @@ class OffensEvalProcessorTask2(DataProcessor):
         return examples
 
 
-class OffensEvalProcessorTask3(DataProcessor):
+class OffensEvalTask3Processor(DataProcessor):
     """Processor for the Fnews data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
@@ -364,18 +364,89 @@ class OffensEvalProcessorTask3(DataProcessor):
         return examples
 
 
+class FNC1Processor(DataProcessor):
+    """Processor for the Fnews data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "train_stances.csv")),
+            self._read_csv(os.path.join(data_dir, "train_bodies.csv")),
+            "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv")),
+            self._read_csv(os.path.join(data_dir, "test_bodies.csv")),
+            "dev")
+
+    # def get_predict_examples(self, data_dir):
+    #     """See base class."""
+    #     return self._create_examples(
+    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["unrelated", "discuss", "agree", "disagree"]
+
+    def _create_examples(self, stance_lines, body_lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(stance_lines):
+            if i == 0:
+                continue
+            if set_type == "train" or set_type == "dev":
+                guid = "%s-%s" % (set_type, i)
+                headline = line[0]
+                body_id = line[1]
+                label = line[2]
+
+                def search(body_lines, body_id):
+                    left_i = 0
+                    right_i = len(body_lines)
+                    tar_i = int((right_i + left_i) / 2)
+                    while left_i < right_i:
+                        if int(body_id) < int(body_lines[tar_i][0]):
+                            right_i = int(tar_i)
+                            tar_i = int((right_i + left_i) / 2)
+                        elif int(body_id) > int(body_lines[tar_i][0]):
+                            left_i = int(tar_i)
+                            tar_i = int((right_i + left_i) / 2)
+                        elif int(body_id) == int(body_lines[tar_i][0]):
+                            return body_lines[tar_i][1]
+
+                article_body = search(body_lines=body_lines, body_id=body_id)
+                examples.append(InputExample(guid=guid, text_a=headline + article_body, text_b=None, label=label))
+            # elif set_type == "predict":
+            #     guid = line[0]
+            #     text_a = line[1]
+            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+
+        return examples
+
+
 my_tasks_num_labels = {
     "fnews": 2,
     "offensevaltask1": 2,
     "offensevaltask2": 2,
     "offensevaltask3": 3,
+    "fnc-1": 4,
 }
 
 my_processors = {
     "fnews": FnewsProcessor,
-    "offensevaltask1": OffensEvalProcessorTask1,
-    "offensevaltask2": OffensEvalProcessorTask2,
-    "offensevaltask3": OffensEvalProcessorTask3,
+    "offensevaltask1": OffensEvalTask1Processor,
+    "offensevaltask2": OffensEvalTask2Processor,
+    "offensevaltask3": OffensEvalTask3Processor,
+    "fnc-1": FNC1Processor,
 }
 
 my_output_modes = {
@@ -383,4 +454,5 @@ my_output_modes = {
     "offensevaltask1": "classification",
     "offensevaltask2": "classification",
     "offensevaltask3": "classification",
+    "fnc-1": "classification",
 }

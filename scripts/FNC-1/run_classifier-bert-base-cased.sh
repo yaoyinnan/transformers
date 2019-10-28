@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval/Task1
-export TASK_NAME=OffensEvalTask1
+export DATA_DIR=data/FNC-1
+export TASK_NAME=FNC-1
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert
@@ -18,9 +18,9 @@ python ./examples/run_classifier.py \
     --per_gpu_train_batch_size 8   \
     --per_gpu_eval_batch_size 8   \
     --per_gpu_predict_batch_size 8   \
-    --learning_rate 5e-5 \
-    --weight_decay 0.0001 \
-    --num_train_epochs 8.0 \
+    --learning_rate 1e-4 \
+    --weight_decay 0.001 \
+    --num_train_epochs 3.0 \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
     --save_steps 1000 \
     --do_eval \
