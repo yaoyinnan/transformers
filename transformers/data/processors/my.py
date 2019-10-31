@@ -94,7 +94,7 @@ def my_convert_examples_to_features(examples,
             logger.info("Writing example %d" % (ex_index))
         if is_tf_dataset:
             example = processor.get_example_from_tensor_dict(example)
-
+            example = processor.tfds_map(example)
         inputs = tokenizer.encode_plus(
             example.text_a,
             example.text_b,

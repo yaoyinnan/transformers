@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Convert BERT checkpoint."""
+"""Convert XXX checkpoint."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -20,26 +20,20 @@ from __future__ import print_function
 
 import argparse
 import torch
-import os
-import sys
 
-current_directory = os.path.dirname(os.path.abspath(__file__))
-root_path = os.path.abspath(os.path.dirname(current_directory) + os.path.sep + ".")
-sys.path.append(root_path)
-
-from transformers import BertConfig, BertForPreTraining, load_tf_weights_in_albert
+from transformers import XxxConfig, XxxForPreTraining, load_tf_weights_in_xxx
 
 import logging
 logging.basicConfig(level=logging.INFO)
 
-def convert_tf_checkpoint_to_pytorch(tf_checkpoint_path, bert_config_file,share_type, pytorch_dump_path):
+def convert_tf_checkpoint_to_pytorch(tf_checkpoint_path, xxx_config_file, pytorch_dump_path):
     # Initialise PyTorch model
-    config = BertConfig.from_pretrained(bert_config_file,share_type=share_type)
-    # print("Building PyTorch model from configuration: {}".format(str(config)))
-    model = BertForPreTraining(config)
+    config = XxxConfig.from_json_file(xxx_config_file)
+    print("Building PyTorch model from configuration: {}".format(str(config)))
+    model = XxxForPreTraining(config)
 
     # Load weights from tf checkpoint
-    load_tf_weights_in_albert(model, config, tf_checkpoint_path)
+    load_tf_weights_in_xxx(model, config, tf_checkpoint_path)
 
     # Save pytorch-model
     print("Save PyTorch model to {}".format(pytorch_dump_path))
@@ -54,16 +48,12 @@ if __name__ == "__main__":
                         type = str,
                         required = True,
                         help = "Path to the TensorFlow checkpoint path.")
-    parser.add_argument("--bert_config_file",
+    parser.add_argument("--xxx_config_file",
                         default = None,
                         type = str,
                         required = True,
-                        help = "The config json file corresponding to the pre-trained BERT model. \n"
+                        help = "The config json file corresponding to the pre-trained XXX model. \n"
                             "This specifies the model architecture.")
-    parser.add_argument('--share_type',
-                        default='all',
-                        type=str,
-                        choices=['all', 'attention', 'ffn', 'None'])
     parser.add_argument("--pytorch_dump_path",
                         default = None,
                         type = str,
@@ -71,15 +61,5 @@ if __name__ == "__main__":
                         help = "Path to the output PyTorch model.")
     args = parser.parse_args()
     convert_tf_checkpoint_to_pytorch(args.tf_checkpoint_path,
-                                     args.bert_config_file,
-                                     args.share_type,
+                                     args.xxx_config_file,
                                      args.pytorch_dump_path)
-
-'''
-example:
-python convert_albert_tf_checkpoint_to_pytorch.py \
-    --tf_checkpoint_path=./pretrain/tf/albert_xlarge_zh \
-    --bert_config_file=./configs/albert_config_xlarge.json \
-    --pytorch_dump_path=./pretrain/pytorch/albert_xlarge_zh/pytorch_model.bin \
-    --share_type=all
-'''
