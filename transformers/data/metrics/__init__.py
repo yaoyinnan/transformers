@@ -45,7 +45,7 @@ if _has_sklearn:
         f1 = f1_score(y_true=labels, y_pred=preds, average='micro')
         return {
             "acc": acc,
-            "f1": f1,
+            "micro-f1": f1,
             "acc_and_f1": (acc + f1) / 2,
         }
 
@@ -55,7 +55,7 @@ if _has_sklearn:
         f1 = f1_score(y_true=labels, y_pred=preds, average='macro')
         return {
             "acc": acc,
-            "f1": f1,
+            "macro-f1": f1,
             "acc_and_f1": (acc + f1) / 2,
         }
 
@@ -107,6 +107,6 @@ if _has_sklearn:
         elif task_name == "offensevaltask3":
             return acc_and_f1_macro(preds, labels)
         elif task_name == "fnc-1":
-            return acc_and_f1_macro(preds, labels)
+            return acc_and_f1_micro(preds, labels)
         else:
             raise KeyError(task_name)

@@ -14,15 +14,16 @@ python ./examples/run_classifier.py \
     --task_name ${TASK_NAME} \
     --do_lower_case \
     --data_dir ${DATA_DIR} \
-    --max_seq_length 128 \
-    --per_gpu_train_batch_size 8   \
-    --per_gpu_eval_batch_size 8   \
-    --per_gpu_predict_batch_size 8   \
-    --learning_rate 1e-4 \
+    --max_seq_length 512 \
+    --per_gpu_train_batch_size 1   \
+    --per_gpu_eval_batch_size 1   \
+    --per_gpu_predict_batch_size 1   \
+    --learning_rate 5e-5 \
     --weight_decay 0.001 \
-    --num_train_epochs 3.0 \
+    --num_train_epochs 10.0 \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
-    --save_steps 1000 \
-    --do_eval \
-    --do_train \
-#    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
+    --save_steps 5000 \
+    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv \
+    --do_predict \
+#    --do_eval \
+#    --do_train \

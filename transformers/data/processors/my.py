@@ -377,21 +377,23 @@ class FNC1Processor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "train_stances.csv")),
-            self._read_csv(os.path.join(data_dir, "train_bodies.csv")),
+            self._read_csv(os.path.join(data_dir, "train_stances.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "train_bodies.csv"), "\""),
             "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv")),
-            self._read_csv(os.path.join(data_dir, "test_bodies.csv")),
+            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), "\""),
             "dev")
 
-    # def get_predict_examples(self, data_dir):
-    #     """See base class."""
-    #     return self._create_examples(
-    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), "\""),
+            "predict")
 
     def get_labels(self):
         """See base class."""
@@ -401,34 +403,38 @@ class FNC1Processor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(stance_lines):
+            if i >= len(stance_lines) / 10:
+                break
             if i == 0:
                 continue
+            guid = "%s-%s" % (set_type, i)
+            headline = line[0]
+            body_id = int(line[1])
+            label = None
+
+            def search(body_lines, body_id):
+                left_i = 0
+                right_i = len(body_lines)
+                tar_i = int((right_i + left_i) / 2)
+                while left_i < right_i:
+                    tar_body_id = int(body_lines[tar_i][0])
+                    if body_id < tar_body_id:
+                        right_i = tar_i
+                        tar_i = int((right_i + left_i) / 2)
+                    elif body_id > tar_body_id:
+                        left_i = tar_i
+                        tar_i = int((right_i + left_i) / 2)
+                    elif body_id == tar_body_id:
+                        return body_lines[tar_i][1]
+
+            article_body = search(body_lines=body_lines, body_id=body_id)
+            text_a = headline + article_body
+            text_a = self.preprocess(text_a)
             if set_type == "train" or set_type == "dev":
-                guid = "%s-%s" % (set_type, i)
-                headline = line[0]
-                body_id = line[1]
                 label = line[2]
-
-                def search(body_lines, body_id):
-                    left_i = 0
-                    right_i = len(body_lines)
-                    tar_i = int((right_i + left_i) / 2)
-                    while left_i < right_i:
-                        if int(body_id) < int(body_lines[tar_i][0]):
-                            right_i = int(tar_i)
-                            tar_i = int((right_i + left_i) / 2)
-                        elif int(body_id) > int(body_lines[tar_i][0]):
-                            left_i = int(tar_i)
-                            tar_i = int((right_i + left_i) / 2)
-                        elif int(body_id) == int(body_lines[tar_i][0]):
-                            return body_lines[tar_i][1]
-
-                article_body = search(body_lines=body_lines, body_id=body_id)
-                examples.append(InputExample(guid=guid, text_a=headline + article_body, text_b=None, label=label))
-            # elif set_type == "predict":
-            #     guid = line[0]
-            #     text_a = line[1]
-            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "predict":
+                pass
+            examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
         return examples
 

@@ -19,6 +19,11 @@ import sys
 import copy
 import json
 
+import re
+from nltk.stem import SnowballStemmer
+from nltk.stem import WordNetLemmatizer
+import emoji
+
 class InputExample(object):
     """
     A single training/test example for simple sequence classification.
@@ -130,3 +135,34 @@ class DataProcessor(object):
                     line = list(unicode(cell, 'utf-8') for cell in line)
                 lines.append(line)
             return lines
+
+    def preprocess(self, text):
+        # 替换表情
+        text = emoji.demojize(text)
+
+        # 去除数据中的非文本部分
+        def scrub_words(text):
+            """Basic cleaning of texts."""
+
+            # 过滤不了\\ \ 中文（）还有————
+            r1 = u'[a-zA-Z0-9’!"#$%&\'()*+,-./:;<=>?@，。?★、…【】《》？“”‘’！[\\]^_`{|}~]+'  # 用户也可以在此进行自定义过滤字符
+            # 者中规则也过滤不完全
+            # r2 = "[\s+\.\!\/_,$%^*(+\"\']+|[+——！，。？、~@#￥%……&*（）]+"
+            r2 = "[\s+\.\!\/_,^*(+\"\']+|[+——！，。？、~%……&*（）]+"
+            # \\\可以过滤掉反向单杠和双杠，/可以过滤掉正向单杠和双杠，第一个中括号里放的是英文符号，第二个中括号里放的是中文符号，第二个中括号前不能少|，否则过滤不完全
+            r3 = "[.!//_,$&%^*()<>+\"'?@#-|:~{}]+|[——！\\\\，。=？、：“”‘’《》【】￥……（）]+"
+            # 去掉括号和括号内的所有内容
+            r4 = "\\【.*?】+|\\《.*?》+|\\#.*?#+|[.!/_,$&%^*()<>+""'?@|:~{}#]+|[——！\\\，。=？、：“”‘’￥……（）《》【】]"
+
+            text = re.sub(r2, ' ', text)
+
+            text = text.strip()
+            return text
+
+        text = scrub_words(text)
+
+        # 词干提取(stemming)和词型还原(lemmatization)
+        wnl = WordNetLemmatizer()
+        text = wnl.lemmatize(text)
+
+        return text

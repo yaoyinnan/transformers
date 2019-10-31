@@ -24,5 +24,5 @@ python ./examples/run_classifier.py \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME} \
     --save_steps 1000 \
     --do_eval \
-    --do_train \
+#    --do_train \
 #    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
