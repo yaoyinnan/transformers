@@ -317,6 +317,9 @@ def predict(args, model, tokenizer, prefix=""):
         elif args.output_mode == "regression":
             preds = np.squeeze(preds).tolist()
 
+        processor = processors[args.task_name]()
+        preds = processor.label_index_to_label(preds)
+
         if len(guids) == len(preds):
             with open(args.predict_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')

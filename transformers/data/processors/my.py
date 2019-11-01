@@ -240,10 +240,10 @@ class OffensEvalTask1Processor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
-    # def get_predict_examples(self, data_dir):
-    #     """See base class."""
-    #     return self._create_examples(
-    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "predict")
 
     def get_labels(self):
         """See base class."""
@@ -255,15 +255,14 @@ class OffensEvalTask1Processor(DataProcessor):
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
+            guid = "%s-%s" % (set_type, i)
             if set_type == "train" or set_type == "dev":
-                guid = "%s-%s" % (set_type, i)
                 text_a = line[1]
                 label = line[0]
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            # elif set_type == "predict":
-            #     guid = line[0]
-            #     text_a = line[1]
-            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "predict":
+                text_a = line[1]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
 
         return examples
 
@@ -288,10 +287,10 @@ class OffensEvalTask2Processor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
-    # def get_predict_examples(self, data_dir):
-    #     """See base class."""
-    #     return self._create_examples(
-    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "predict")
 
     def get_labels(self):
         """See base class."""
@@ -303,15 +302,14 @@ class OffensEvalTask2Processor(DataProcessor):
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
+            guid = "%s-%s" % (set_type, i)
             if set_type == "train" or set_type == "dev":
-                guid = "%s-%s" % (set_type, i)
                 text_a = line[1]
                 label = line[0]
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            # elif set_type == "predict":
-            #     guid = line[0]
-            #     text_a = line[1]
-            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "predict":
+                text_a = line[1]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
 
         return examples
 
@@ -336,10 +334,10 @@ class OffensEvalTask3Processor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
-    # def get_predict_examples(self, data_dir):
-    #     """See base class."""
-    #     return self._create_examples(
-    #         self._read_tsv(os.path.join(data_dir, "predict.tsv")), "predict")
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "predict")
 
     def get_labels(self):
         """See base class."""
@@ -351,15 +349,14 @@ class OffensEvalTask3Processor(DataProcessor):
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
+            guid = "%s-%s" % (set_type, i)
             if set_type == "train" or set_type == "dev":
-                guid = "%s-%s" % (set_type, i)
                 text_a = line[1]
                 label = line[0]
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            # elif set_type == "predict":
-            #     guid = line[0]
-            #     text_a = line[1]
-            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "predict":
+                text_a = line[1]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
 
         return examples
 
@@ -402,8 +399,9 @@ class FNC1Processor(DataProcessor):
     def _create_examples(self, stance_lines, body_lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
+        label_list = [0, 0, 0, 0]
         for (i, line) in enumerate(stance_lines):
-            if i >= len(stance_lines) / 10:
+            if i >= len(stance_lines) / 5:
                 break
             if i == 0:
                 continue
@@ -432,10 +430,49 @@ class FNC1Processor(DataProcessor):
             text_a = self.preprocess(text_a)
             if set_type == "train" or set_type == "dev":
                 label = line[2]
+
+                labels = self.get_labels()
+                if label == labels[0]:
+                    if label_list[0] > 100:
+                        continue
+                    label_list[0] += 1
+                elif label == labels[1]:
+                    if label_list[1] > 100:
+                        continue
+                    label_list[1] += 1
+                elif label == labels[2]:
+                    if label_list[2] > 100:
+                        continue
+                    label_list[2] += 1
+                elif label == labels[3]:
+                    if label_list[3] > 100:
+                        continue
+                    label_list[3] += 1
+
             elif set_type == "predict":
-                pass
+                label = line[2]
+
+                labels = self.get_labels()
+                if label == labels[0]:
+                    if label_list[0] > 100:
+                        continue
+                    label_list[0] += 1
+                elif label == labels[1]:
+                    if label_list[1] > 100:
+                        continue
+                    label_list[1] += 1
+                elif label == labels[2]:
+                    if label_list[2] > 100:
+                        continue
+                    label_list[2] += 1
+                elif label == labels[3]:
+                    if label_list[3] > 100:
+                        continue
+                    label_list[3] += 1
+
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
+        print(examples)
         return examples
 
 

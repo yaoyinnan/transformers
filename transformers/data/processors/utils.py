@@ -143,7 +143,17 @@ class DataProcessor(object):
                 lines.append(line)
             return lines
 
+    def label_index_to_label(self, label_index_list):
+        """将label_index列表转化为label列表"""
+        label = self.get_labels()
+        label_list = []
+        for i in label_index_list:
+            label_list.append(label[i])
+
+        return label_list
+
     def preprocess(self, text):
+        """文本预处理"""
         # 替换表情
         text = emoji.demojize(text)
 
