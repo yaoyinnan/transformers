@@ -125,7 +125,7 @@ dmypy.json
 tensorflow_code
 
 # Models
-models
+# models
 proc_data
 
 # examples
@@ -133,7 +133,7 @@ runs
 examples/runs
 
 # data
-/data
+# /data
 serialization_dir
 
 # emacs
