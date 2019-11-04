@@ -166,9 +166,9 @@ def my_convert_examples_to_features(examples,
                                                 'token_type_ids': tf.TensorShape([None])},
                                                tf.TensorShape([])))
 
-    if evaluate == "train" or evaluate == "dev":
+    if evaluate == "train":
         return features
-    elif evaluate == "predict":
+    elif evaluate == "dev" or evaluate == "predict":
         return features, guids
 
 
@@ -401,8 +401,8 @@ class FNC1Processor(DataProcessor):
         examples = []
         label_list = [0, 0, 0, 0]
         for (i, line) in enumerate(stance_lines):
-            if i >= len(stance_lines) / 5:
-                break
+            # if i >= len(stance_lines):
+            #     break
             if i == 0:
                 continue
             guid = "%s-%s" % (set_type, i)
@@ -428,51 +428,32 @@ class FNC1Processor(DataProcessor):
             article_body = search(body_lines=body_lines, body_id=body_id)
             text_a = headline + article_body
             text_a = self.preprocess(text_a)
-            if set_type == "train" or set_type == "dev":
-                label = line[2]
-
+            label = line[2]
+            if set_type == "train":
                 labels = self.get_labels()
                 if label == labels[0]:
-                    if label_list[0] > 100:
+                    if label_list[0] > 800:
                         continue
                     label_list[0] += 1
                 elif label == labels[1]:
-                    if label_list[1] > 100:
+                    if label_list[1] > 800:
                         continue
                     label_list[1] += 1
                 elif label == labels[2]:
-                    if label_list[2] > 100:
+                    if label_list[2] > 800:
                         continue
                     label_list[2] += 1
                 elif label == labels[3]:
-                    if label_list[3] > 100:
+                    if label_list[3] > 800:
                         continue
                     label_list[3] += 1
 
-            elif set_type == "predict":
-                label = line[2]
-
-                labels = self.get_labels()
-                if label == labels[0]:
-                    if label_list[0] > 100:
-                        continue
-                    label_list[0] += 1
-                elif label == labels[1]:
-                    if label_list[1] > 100:
-                        continue
-                    label_list[1] += 1
-                elif label == labels[2]:
-                    if label_list[2] > 100:
-                        continue
-                    label_list[2] += 1
-                elif label == labels[3]:
-                    if label_list[3] > 100:
-                        continue
-                    label_list[3] += 1
+            elif set_type == "predict" or set_type == "dev":
+                pass
 
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
-        print(examples)
+        # print(examples)
         return examples
 
 

@@ -212,7 +212,7 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     results = {}
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
-        eval_dataset = load_and_cache_examples(args, eval_task, tokenizer, evaluate="dev")
+        eval_dataset, guids = load_and_cache_examples(args, eval_task, tokenizer, evaluate="dev")
         if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(eval_output_dir)
 
@@ -266,6 +266,23 @@ def evaluate(args, model, tokenizer, prefix=""):
             for key in sorted(result.keys()):
                 logger.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
+            writer.write("%s = %s\n" % ("loss", str(eval_loss)))
+
+        processor = processors[args.task_name]()
+        preds = processor.label_index_to_label(preds)
+
+        if len(guids) == len(preds):
+            output_result_file = os.path.join(eval_output_dir, "results.csv")
+            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
+                predict_file_writer = csv.writer(predict_file, delimiter=',')
+                headers = ["id", "label"]
+                predict_file_writer.writerow(headers)
+                for index in range(len(guids)):
+                    predict_file_writer.writerow([guids[index], preds[index]])
+                logger.info("Save " + args.predict_file + " down.")
+        else:
+            raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
+                len(guids), len(preds)))
 
     return results
 
@@ -363,7 +380,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
             examples = processor.get_dev_examples(args.data_dir)
         elif evaluate == "predict":
             examples = processor.get_predict_examples(args.data_dir)
-        if evaluate == "train" or evaluate == "dev":
+        if evaluate == "train":
             features = convert_examples_to_features(examples,
                                                     evaluate,
                                                     tokenizer,
@@ -375,7 +392,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
                                                     pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
                                                     pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
                                                     )
-        elif evaluate == "predict":
+        elif evaluate == "dev" or evaluate == "predict":
             features, guids = convert_examples_to_features(examples,
                                                            evaluate,
                                                            tokenizer,
@@ -415,9 +432,9 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
     elif evaluate == "predict":
         dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids)
 
-    if evaluate == "train" or evaluate == "dev":
+    if evaluate == "train":
         return dataset
-    elif evaluate == "predict":
+    elif evaluate == "dev" or evaluate == "predict":
         return dataset, guids
 
 

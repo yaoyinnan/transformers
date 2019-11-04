@@ -20,9 +20,9 @@ python ./examples/run_classifier.py \
     --per_gpu_predict_batch_size 8   \
     --learning_rate 5e-5 \
     --weight_decay 0.0001 \
-    --num_train_epochs 8.0 \
+    --num_train_epochs 1.0 \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME} \
     --save_steps 1000 \
     --do_eval \
     --do_train \
-#    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
+    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
