@@ -75,6 +75,7 @@ if is_torch_available():
                                 OpenAIGPTLMHeadModel, OpenAIGPTDoubleHeadsModel,
                                 load_tf_weights_in_openai_gpt, OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_MAP)
     from .modeling_transfo_xl import (TransfoXLPreTrainedModel, TransfoXLModel, TransfoXLLMHeadModel,
+                                    AdaptiveEmbedding,
                                     load_tf_weights_in_transfo_xl, TRANSFO_XL_PRETRAINED_MODEL_ARCHIVE_MAP)
     from .modeling_gpt2 import (GPT2PreTrainedModel, GPT2Model,
                                 GPT2LMHeadModel, GPT2DoubleHeadsModel,
@@ -96,14 +97,13 @@ if is_torch_available():
                                 ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP)
     from .modeling_distilbert import (DistilBertForMaskedLM, DistilBertModel,
                                 DistilBertForSequenceClassification, DistilBertForQuestionAnswering,
+                                DistilBertForTokenClassification,
                                 DISTILBERT_PRETRAINED_MODEL_ARCHIVE_MAP)
-
-    from .modeling_albert import (load_tf_weights_in_albert, BertEmbeddings,
-                                  BertSelfAttention, BertSelfOutput)
+    from .modeling_encoder_decoder import PreTrainedEncoderDecoder, Model2Model
 
     # Optimization
-    from .optimization import (AdamW, ConstantLRSchedule, WarmupConstantSchedule, WarmupCosineSchedule,
-                               WarmupCosineWithHardRestartsSchedule, WarmupLinearSchedule)
+    from .optimization import (AdamW, get_constant_schedule, get_constant_schedule_with_warmup, get_cosine_schedule_with_warmup,
+                               get_cosine_with_hard_restarts_schedule_with_warmup, get_linear_schedule_with_warmup)
 
 
 # TensorFlow
