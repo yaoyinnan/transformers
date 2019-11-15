@@ -257,7 +257,8 @@ def evaluate(args, model, tokenizer, prefix=""):
             preds = np.argmax(preds, axis=1)
         elif args.output_mode == "regression":
             preds = np.squeeze(preds)
-        result = compute_metrics(eval_task, preds, out_label_ids)
+        processor = processors[args.task_name]()
+        result = compute_metrics(eval_task, preds, out_label_ids, processor.get_labels())
         results.update(result)
 
         output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
@@ -268,7 +269,6 @@ def evaluate(args, model, tokenizer, prefix=""):
                 writer.write("%s = %s\n" % (key, str(result[key])))
             writer.write("%s = %s\n" % ("loss", str(eval_loss)))
 
-        processor = processors[args.task_name]()
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
@@ -364,7 +364,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
                                                                                    str(task)))
     features = None
     guids = None
-    if os.path.exists(cached_features_file) and (evaluate == "train" or evaluate == "dev"):
+    if os.path.exists(cached_features_file) and (evaluate == "train"):
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
     else:

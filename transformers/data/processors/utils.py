@@ -22,7 +22,11 @@ import json
 import re
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+import nltk
+
 import emoji
+
 
 class InputExample(object):
     """
@@ -37,6 +41,7 @@ class InputExample(object):
         label: (Optional) string. The label of the example. This should be
         specified for train and dev examples, but not for test examples.
     """
+
     def __init__(self, guid, text_a, text_b=None, label=None):
         self.guid = guid
         self.text_a = text_a
@@ -157,6 +162,9 @@ class DataProcessor(object):
         # 替换表情
         text = emoji.demojize(text)
 
+        # 转化为小写
+        text = text.lower()
+
         # 去除数据中的非文本部分
         def scrub_words(text):
             """Basic cleaning of texts."""
@@ -181,5 +189,25 @@ class DataProcessor(object):
         # 词干提取(stemming)和词型还原(lemmatization)
         wnl = WordNetLemmatizer()
         text = wnl.lemmatize(text)
+
+        return text
+
+    def stop_word(self, text, lan="english"):
+        """去停用词（基本都是负作用）"""
+        # 分词
+        pattern = r"""(?x)                   # set flag to allow verbose regexps 
+            	              (?:[A-Z]\.)+           # abbreviations, e.g. U.S.A. 
+            	              |\d+(?:\.\d+)?%?       # numbers, incl. currency and percentages 
+            	              |\w+(?:[-']\w+)*       # words w/ optional internal hyphens/apostrophe 
+            	              |\.\.\.                # ellipsis 
+            	              |(?:[.,;"'?():-_`])    # special characters with meanings 
+            	            """
+        text = nltk.regexp_tokenize(text, pattern)
+
+        # 去停止词
+        text = [word for word in text if word not in stopwords.words(lan)]
+
+        # 拼接
+        text = ' '.join(text)
 
         return text

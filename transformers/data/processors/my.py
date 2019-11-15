@@ -374,22 +374,22 @@ class FNC1Processor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "train_stances.csv"), "\""),
-            self._read_csv(os.path.join(data_dir, "train_bodies.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "train_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "train_bodies.csv"), '"'),
             "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv"), "\""),
-            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "test_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), '"'),
             "dev")
 
     def get_predict_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "competition_test_stances.csv"), "\""),
-            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), "\""),
+            self._read_csv(os.path.join(data_dir, "test_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "test_bodies.csv"), '"'),
             "predict")
 
     def get_labels(self):
@@ -399,7 +399,10 @@ class FNC1Processor(DataProcessor):
     def _create_examples(self, stance_lines, body_lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
-        label_list = [0, 0, 0, 0]
+        # label_list = [860, 2630, 2965, 3145]  # no-balance
+        # label_list = [2400, 2400, 2400, 2400] # balance 800
+        label_list = [0, 0, 0, 3200]   # balance 1600(disagree = double)
+        max_num = 4000
         for (i, line) in enumerate(stance_lines):
             # if i >= len(stance_lines):
             #     break
@@ -408,7 +411,24 @@ class FNC1Processor(DataProcessor):
             guid = "%s-%s" % (set_type, i)
             headline = line[0]
             body_id = int(line[1])
-            label = None
+            label = line[2]
+            if set_type == "train":
+                labels = self.get_labels()
+                flag = False
+                for label_index in range(len(label_list)):
+                    if label == labels[label_index]:
+                        if label_list[label_index] >= max_num:
+                            flag = True
+                            break
+                        label_list[label_index] += 1
+                if flag:
+                    continue
+
+                if label_list == [max_num for n in range(len(self.get_labels()))]:
+                    break
+
+            elif set_type == "predict" or set_type == "dev":
+                pass
 
             def search(body_lines, body_id):
                 left_i = 0
@@ -427,33 +447,115 @@ class FNC1Processor(DataProcessor):
 
             article_body = search(body_lines=body_lines, body_id=body_id)
             text_a = headline + article_body
-            text_a = self.preprocess(text_a)
-            label = line[2]
-            if set_type == "train":
-                labels = self.get_labels()
-                if label == labels[0]:
-                    if label_list[0] > 800:
-                        continue
-                    label_list[0] += 1
-                elif label == labels[1]:
-                    if label_list[1] > 800:
-                        continue
-                    label_list[1] += 1
-                elif label == labels[2]:
-                    if label_list[2] > 800:
-                        continue
-                    label_list[2] += 1
-                elif label == labels[3]:
-                    if label_list[3] > 800:
-                        continue
-                    label_list[3] += 1
-
-            elif set_type == "predict" or set_type == "dev":
-                pass
+            # text_a = self.preprocess(text_a)
+            # 去停用词（基本都是负作用）
+            # text_a = self.stop_word(text_a, "english")
 
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            if label == self.get_labels()[3]:
+                for i in range(0, 4):
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
         # print(examples)
+        return examples
+
+
+class WSDMFakeNewsProcessor(DataProcessor):
+    """Processor for the WSDMFakeNews data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "train.csv"), '"'), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "dev.csv"), '"'), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "test.csv"), '"'), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["agreed", "disagreed", "unrelated"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line[0]
+            if set_type == "train" or set_type == "dev":
+                if i >= 3000:
+                    break
+                text_a = line[3] + line[4]
+                text_a = self.preprocess(text_a)
+                label = line[7]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line[3] + line[4]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class LIARProcessor(DataProcessor):
+    """Processor for the WSDMFakeNews data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["pants-fire", "false", "barely-true", "half-true", "mostly-true", "true"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line[0]
+            if set_type == "train" or set_type == "dev":
+                # if i >= 3000:
+                #     break
+                label = line[1]
+                text_a = line[2]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line[2]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
         return examples
 
 
@@ -463,6 +565,8 @@ my_tasks_num_labels = {
     "offensevaltask2": 2,
     "offensevaltask3": 3,
     "fnc-1": 4,
+    "wsdm-fakenews": 3,
+    "liar": 6,
 }
 
 my_processors = {
@@ -471,6 +575,8 @@ my_processors = {
     "offensevaltask2": OffensEvalTask2Processor,
     "offensevaltask3": OffensEvalTask3Processor,
     "fnc-1": FNC1Processor,
+    "wsdm-fakenews": WSDMFakeNewsProcessor,
+    "liar": LIARProcessor,
 }
 
 my_output_modes = {
@@ -479,4 +585,6 @@ my_output_modes = {
     "offensevaltask2": "classification",
     "offensevaltask3": "classification",
     "fnc-1": "classification",
+    "wsdm-fakenews": "classification",
+    "liar": "classification",
 }

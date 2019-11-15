@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 try:
     from scipy.stats import pearsonr, spearmanr
-    from sklearn.metrics import matthews_corrcoef, f1_score
+    from sklearn import metrics
 
     _has_sklearn = True
 except (AttributeError, ImportError) as e:
@@ -42,9 +42,13 @@ if _has_sklearn:
 
     def acc_and_f1_micro(preds, labels):
         acc = simple_accuracy(preds, labels)
-        f1 = f1_score(y_true=labels, y_pred=preds, average='micro')
+        precision = metrics.precision_score(y_true=labels, y_pred=preds, average='micro')
+        recall = metrics.recall_score(y_true=labels, y_pred=preds, average='micro')
+        f1 = metrics.f1_score(y_true=labels, y_pred=preds, average='micro')
         return {
             "acc": acc,
+            "precision": precision,
+            "recall": recall,
             "micro-f1": f1,
             "acc_and_f1": (acc + f1) / 2,
         }
@@ -52,13 +56,22 @@ if _has_sklearn:
 
     def acc_and_f1_macro(preds, labels):
         acc = simple_accuracy(preds, labels)
-        f1 = f1_score(y_true=labels, y_pred=preds, average='macro')
+        precision = metrics.precision_score(y_true=labels, y_pred=preds, average='macro')
+        recall = metrics.recall_score(y_true=labels, y_pred=preds, average='macro')
+        f1 = metrics.f1_score(y_true=labels, y_pred=preds, average='macro')
         return {
             "acc": acc,
+            "precision": precision,
+            "recall": recall,
             "macro-f1": f1,
             "acc_and_f1": (acc + f1) / 2,
         }
 
+    def classification_report(preds, labels, target_names=None):
+        report = metrics.classification_report(y_true=labels, y_pred=preds, target_names=target_names, digits=4)
+        return {
+            "report": report,
+        }
 
     def pearson_and_spearman(preds, labels):
         pearson_corr = pearsonr(preds, labels)[0]
@@ -73,7 +86,7 @@ if _has_sklearn:
     def glue_compute_metrics(task_name, preds, labels):
         assert len(preds) == len(labels)
         if task_name == "cola":
-            return {"mcc": matthews_corrcoef(labels, preds)}
+            return {"mcc": metrics.matthews_corrcoef(labels, preds)}
         elif task_name == "sst-2":
             return {"acc": simple_accuracy(preds, labels)}
         elif task_name == "mrpc":
@@ -96,7 +109,7 @@ if _has_sklearn:
             raise KeyError(task_name)
 
 
-    def my_compute_metrics(task_name, preds, labels):
+    def my_compute_metrics(task_name, preds, labels, target_names=None):
         assert len(preds) == len(labels)
         if task_name == "fnews":
             return {"acc": simple_accuracy(preds, labels)}
@@ -107,6 +120,10 @@ if _has_sklearn:
         elif task_name == "offensevaltask3":
             return acc_and_f1_macro(preds, labels)
         elif task_name == "fnc-1":
-            return acc_and_f1_micro(preds, labels)
+            return classification_report(preds, labels, target_names)
+        elif task_name == "wsdm-fakenews":
+            return acc_and_f1_macro(preds, labels)
+        elif task_name == "liar":
+            return acc_and_f1_macro(preds, labels)
         else:
             raise KeyError(task_name)

@@ -5,18 +5,18 @@ export DATA_DIR=data/FNC-1
 export TASK_NAME=FNC-1
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
-export MODEL=bert
-export MODEL_NAME=bert-base-cased
+export MODEL=xlnet
+export MODEL_NAME=xlnet-base-cased
 
 export DEFAULT_BATCH_SIZE=8
-export BATCH_SIZE=1
+export BATCH_SIZE=4
 export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
 export DEFAULT_MAX_SEQ_LENGTH=128
 export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
-export STAGE_NUM=8
-export NEXT_STAGE_NUM=9
+export STAGE_NUM=1
+export NEXT_STAGE_NUM=1
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \
@@ -28,8 +28,8 @@ python ./examples/run_classifier.py \
     --per_gpu_train_batch_size ${BATCH_SIZE}   \
     --per_gpu_eval_batch_size ${BATCH_SIZE}   \
     --per_gpu_predict_batch_size ${BATCH_SIZE}   \
-    --learning_rate 1e-5 \
-    --weight_decay 0.00008 \
+    --learning_rate 3e-5 \
+    --weight_decay 0.00001 \
     --num_train_epochs 10.0 \
     --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${SAVE_STEPS} \
