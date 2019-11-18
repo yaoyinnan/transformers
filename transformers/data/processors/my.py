@@ -401,8 +401,8 @@ class FNC1Processor(DataProcessor):
         examples = []
         # label_list = [860, 2630, 2965, 3145]  # no-balance
         # label_list = [2400, 2400, 2400, 2400] # balance 800
-        label_list = [0, 0, 0, 3200]   # balance 1600(disagree = double)
-        max_num = 4000
+        label_list = [0, 0, 0, 1600]   # balance 1600(disagree = double)
+        max_num = 2400
         for (i, line) in enumerate(stance_lines):
             # if i >= len(stance_lines):
             #     break
@@ -453,7 +453,7 @@ class FNC1Processor(DataProcessor):
 
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
             if label == self.get_labels()[3]:
-                for i in range(0, 4):
+                for i in range(0, 2):
                     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
         # print(examples)

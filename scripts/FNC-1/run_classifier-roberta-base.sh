@@ -16,7 +16,7 @@ export DEFAULT_MAX_SEQ_LENGTH=128
 export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
 export STAGE_NUM=2
-export NEXT_STAGE_NUM=7
+export NEXT_STAGE_NUM=8
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \

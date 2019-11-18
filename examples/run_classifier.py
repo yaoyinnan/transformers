@@ -44,17 +44,17 @@ root_path = os.path.abspath(os.path.dirname(current_directory) + os.path.sep + "
 sys.path.append(root_path)
 
 from transformers import (WEIGHTS_NAME, BertConfig,
-                          BertForSequenceClassification, BertTokenizer,
-                          RobertaConfig,
-                          RobertaForSequenceClassification,
-                          RobertaTokenizer,
-                          XLMConfig, XLMForSequenceClassification,
-                          XLMTokenizer, XLNetConfig,
-                          XLNetForSequenceClassification,
-                          XLNetTokenizer,
-                          DistilBertConfig,
-                          DistilBertForSequenceClassification,
-                          DistilBertTokenizer)
+                                  BertForSequenceClassification, BertTokenizer,
+                                  RobertaConfig,
+                                  RobertaForSequenceClassification,
+                                  RobertaTokenizer,
+                                  XLMConfig, XLMForSequenceClassification,
+                                  XLMTokenizer, XLNetConfig,
+                                  XLNetForSequenceClassification,
+                                  XLNetTokenizer,
+                                  DistilBertConfig,
+                                  DistilBertForSequenceClassification,
+                                  DistilBertTokenizer)
 
 from transformers import AdamW, get_linear_schedule_with_warmup
 
