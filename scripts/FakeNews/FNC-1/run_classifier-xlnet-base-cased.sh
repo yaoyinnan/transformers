@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -eux
 
-export DATA_DIR=data/FNC-1
 export TASK_NAME=FNC-1
+export TASK=FakeNews
+export DATA_DIR=data/${TASK}/${TASK_NAME}
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=xlnet
@@ -31,9 +32,9 @@ python ./examples/run_classifier.py \
     --learning_rate 3e-5 \
     --weight_decay 0.00001 \
     --num_train_epochs 10.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${SAVE_STEPS} \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM}/result.csv \
+    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM}/result.csv \
     --do_eval \
     --do_train \
 #    --do_predict \

@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/fnews
 export TASK_NAME=FNews
+export TASK=FakeNews
+export DATA_DIR=data/${TASK}/${TASK_NAME}
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert
-export MODEL_PATH=models/albert
-export MODEL_NAME=albert-large-zh
+export MODEL_PATH=models/roberta
+export MODEL_NAME=roberta-wwm-ext-chinese
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=2
 
@@ -25,6 +26,6 @@ python ./examples/run_classifier.py \
     --learning_rate 1e-4 \
     --weight_decay 0.0001 \
     --num_train_epochs 10.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
     --save_steps 1000 \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv
+    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv

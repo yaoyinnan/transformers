@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/fnews
 export TASK_NAME=FNews
+export TASK=FakeNews
+export DATA_DIR=data/${TASK}/${TASK_NAME}
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=xlnet
@@ -25,6 +26,6 @@ python ./examples/run_classifier.py \
     --learning_rate 1e-5 \
     --weight_decay 0.0004 \
     --num_train_epochs 14.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps 2500 \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM}/result.csv
+    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM}/result.csv

@@ -374,14 +374,14 @@ class FNC1Processor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "train_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "train_stances_stage2.csv"), '"'),
             self._read_csv(os.path.join(data_dir, "train_bodies.csv"), '"'),
             "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "test_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "test_stances_stage2.csv"), '"'),
             self._read_csv(os.path.join(data_dir, "test_bodies.csv"), '"'),
             "dev")
 
@@ -394,14 +394,16 @@ class FNC1Processor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return ["unrelated", "discuss", "agree", "disagree"]
+        return ["discuss", "agree", "disagree"]
 
     def _create_examples(self, stance_lines, body_lines, set_type):
         """Creates examples for the training and dev sets."""
         examples = []
         # label_list = [860, 2630, 2965, 3145]  # no-balance
         # label_list = [2400, 2400, 2400, 2400] # balance 800
-        label_list = [0, 0, 0, 1600]   # balance 1600(disagree = double)
+        label_list = [0, 0, 0, 1600]  # balance 1600(disagree = double)
+        # label_list = [0, 0, 0, 0]  # balance 800(disagree = one)
+        # label_list = [0, 0, 6000, 7200]  # balance 800(disagree = one)
         max_num = 2400
         for (i, line) in enumerate(stance_lines):
             # if i >= len(stance_lines):
@@ -412,23 +414,24 @@ class FNC1Processor(DataProcessor):
             headline = line[0]
             body_id = int(line[1])
             label = line[2]
-            if set_type == "train":
-                labels = self.get_labels()
-                flag = False
-                for label_index in range(len(label_list)):
-                    if label == labels[label_index]:
-                        if label_list[label_index] >= max_num:
-                            flag = True
-                            break
-                        label_list[label_index] += 1
-                if flag:
-                    continue
 
-                if label_list == [max_num for n in range(len(self.get_labels()))]:
-                    break
-
-            elif set_type == "predict" or set_type == "dev":
-                pass
+            # if set_type == "train":
+            #     labels = self.get_labels()
+            #     flag = False
+            #     for label_index in range(len(label_list)):
+            #         if label == labels[label_index]:
+            #             if label_list[label_index] >= max_num:
+            #                 flag = True
+            #                 break
+            #             label_list[label_index] += 1
+            #     if flag:
+            #         continue
+            #
+            #     if label_list == [max_num for n in range(len(self.get_labels()))]:
+            #         break
+            #
+            # elif set_type == "predict" or set_type == "dev":
+            #     pass
 
             def search(body_lines, body_id):
                 left_i = 0
@@ -452,9 +455,9 @@ class FNC1Processor(DataProcessor):
             # text_a = self.stop_word(text_a, "english")
 
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            if label == self.get_labels()[3]:
-                for i in range(0, 2):
-                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            # if label == self.get_labels()[3]:
+            #     for i in range(0, 2):
+            #         examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
         # print(examples)
         return examples
@@ -559,14 +562,65 @@ class LIARProcessor(DataProcessor):
         return examples
 
 
+class FEVERProcessor(DataProcessor):
+    """Processor for the WSDMFakeNews data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json(os.path.join(data_dir, "train.json")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json(os.path.join(data_dir, "shared_task_dev.json")), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json(os.path.join(data_dir, "shared_task_test.json")), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["SUPPORTS", "REFUTES", "NOT ENOUGH INFO"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line['id']
+            if set_type == "train" or set_type == "dev":
+                # if i >= 3000:
+                #     break
+                label = line['label']
+                text_a = line['claim']
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line['claim']
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
 my_tasks_num_labels = {
     "fnews": 2,
     "offensevaltask1": 2,
     "offensevaltask2": 2,
     "offensevaltask3": 3,
-    "fnc-1": 4,
+    "fnc-1": 3,
     "wsdm-fakenews": 3,
     "liar": 6,
+    "fever": 3,
 }
 
 my_processors = {
@@ -577,6 +631,7 @@ my_processors = {
     "fnc-1": FNC1Processor,
     "wsdm-fakenews": WSDMFakeNewsProcessor,
     "liar": LIARProcessor,
+    "fever": FEVERProcessor,
 }
 
 my_output_modes = {
@@ -587,4 +642,5 @@ my_output_modes = {
     "fnc-1": "classification",
     "wsdm-fakenews": "classification",
     "liar": "classification",
+    "fever": "classification",
 }

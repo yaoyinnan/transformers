@@ -148,6 +148,17 @@ class DataProcessor(object):
                 lines.append(line)
             return lines
 
+    @classmethod
+    def _read_json(cls, input_file):
+        """Reads a tab separated value file."""
+        with open(input_file, "r", encoding="utf-8-sig") as f:
+            reader = f.read().split("\n")
+            lines = []
+            for line in reader:
+                load_dict = json.loads(line)
+                lines.append(load_dict)
+            return lines
+
     def label_index_to_label(self, label_index_list):
         """将label_index列表转化为label列表"""
         label = self.get_labels()

@@ -125,5 +125,7 @@ if _has_sklearn:
             return acc_and_f1_macro(preds, labels)
         elif task_name == "liar":
             return acc_and_f1_macro(preds, labels)
+        elif task_name == "fever":
+            return acc_and_f1_macro(preds, labels)
         else:
             raise KeyError(task_name)
