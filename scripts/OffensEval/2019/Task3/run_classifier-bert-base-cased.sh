@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval/Task1
-export TASK_NAME=OffensEvalTask1
+export TASK=OffensEval
+export TASK_NAME=OffensEval2019Task3
+export DATA_DIR=data/OffensEval/2019/Task3
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
-export MODEL=roberta
-export MODEL_NAME=roberta-base
-export STAGE_NUM=1
+export MODEL=bert
+export MODEL_NAME=bert-base-cased
+export STAGE_NUM=2-2
 export NEXT_STAGE_NUM=3-2
 
 python ./examples/run_classifier.py \
@@ -14,15 +15,15 @@ python ./examples/run_classifier.py \
     --task_name ${TASK_NAME} \
     --do_lower_case \
     --data_dir ${DATA_DIR} \
-    --max_seq_length 64 \
+    --max_seq_length 128 \
     --per_gpu_train_batch_size 8   \
     --per_gpu_eval_batch_size 8   \
     --per_gpu_predict_batch_size 8   \
     --learning_rate 5e-5 \
-    --weight_decay 0.001 \
-    --num_train_epochs 8.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
+    --weight_decay 0.0001 \
+    --num_train_epochs 1.0 \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME} \
     --save_steps 1000 \
     --do_eval \
     --do_train \
-#    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/result.csv
+    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/result.csv

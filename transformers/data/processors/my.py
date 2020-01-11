@@ -220,8 +220,8 @@ class FnewsProcessor(DataProcessor):
         return examples
 
 
-class OffensEvalTask1Processor(DataProcessor):
-    """Processor for the Fnews data set (My version)."""
+class OffensEval2019Task1Processor(DataProcessor):
+    """Processor for the OffensEval2019Task1 data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -267,8 +267,8 @@ class OffensEvalTask1Processor(DataProcessor):
         return examples
 
 
-class OffensEvalTask2Processor(DataProcessor):
-    """Processor for the Fnews data set (My version)."""
+class OffensEval2019Task2Processor(DataProcessor):
+    """Processor for the OffensEval2019Task2 data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -314,8 +314,8 @@ class OffensEvalTask2Processor(DataProcessor):
         return examples
 
 
-class OffensEvalTask3Processor(DataProcessor):
-    """Processor for the Fnews data set (My version)."""
+class OffensEval2019Task3Processor(DataProcessor):
+    """Processor for the OffensEval2019Task3 data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -361,8 +361,55 @@ class OffensEvalTask3Processor(DataProcessor):
         return examples
 
 
+class OffensEval2020Task1EnglishProcessor(DataProcessor):
+    """Processor for the OffensEval2020Task1English data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "89train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["OFF", "NOT"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = "%s-%s" % (set_type, i)
+            if set_type == "train" or set_type == "dev":
+                text_a = line[1]
+                label = line[0]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line[1]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+
+        return examples
+
+
 class FNC1Processor(DataProcessor):
-    """Processor for the Fnews data set (My version)."""
+    """Processor for the FNC1 data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -513,7 +560,7 @@ class WSDMFakeNewsProcessor(DataProcessor):
 
 
 class LIARProcessor(DataProcessor):
-    """Processor for the WSDMFakeNews data set (My version)."""
+    """Processor for the LIARP data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -563,7 +610,7 @@ class LIARProcessor(DataProcessor):
 
 
 class FEVERProcessor(DataProcessor):
-    """Processor for the WSDMFakeNews data set (My version)."""
+    """Processor for the FEVER data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -614,33 +661,36 @@ class FEVERProcessor(DataProcessor):
 
 my_tasks_num_labels = {
     "fnews": 2,
-    "offensevaltask1": 2,
-    "offensevaltask2": 2,
-    "offensevaltask3": 3,
     "fnc-1": 3,
     "wsdm-fakenews": 3,
     "liar": 6,
     "fever": 3,
+    "offenseval2019task1": 2,
+    "offenseval2019task2": 2,
+    "offenseval2019task3": 3,
+    "offenseval2020task1english": 2,
 }
 
 my_processors = {
     "fnews": FnewsProcessor,
-    "offensevaltask1": OffensEvalTask1Processor,
-    "offensevaltask2": OffensEvalTask2Processor,
-    "offensevaltask3": OffensEvalTask3Processor,
     "fnc-1": FNC1Processor,
     "wsdm-fakenews": WSDMFakeNewsProcessor,
     "liar": LIARProcessor,
     "fever": FEVERProcessor,
+    "offenseval2019task1": OffensEval2019Task1Processor,
+    "offenseval2019task2": OffensEval2019Task2Processor,
+    "offenseval2019task3": OffensEval2019Task3Processor,
+    "offenseval2020task1english": OffensEval2020Task1EnglishProcessor,
 }
 
 my_output_modes = {
     "fnews": "classification",
-    "offensevaltask1": "classification",
-    "offensevaltask2": "classification",
-    "offensevaltask3": "classification",
     "fnc-1": "classification",
     "wsdm-fakenews": "classification",
     "liar": "classification",
     "fever": "classification",
+    "offenseval2019task1": "classification",
+    "offenseval2019task2": "classification",
+    "offenseval2019task3": "classification",
+    "offenseval2020task1english": "classification",
 }

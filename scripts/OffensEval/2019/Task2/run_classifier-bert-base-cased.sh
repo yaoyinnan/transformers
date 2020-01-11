@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval/Task1
-export TASK_NAME=OffensEvalTask1
+export TASK=OffensEval
+export TASK_NAME=OffensEval2019Task2
+export DATA_DIR=data/OffensEval/2019/Task2
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert
 export MODEL_NAME=bert-base-cased
-export STAGE_NUM=1
+export STAGE_NUM=2-2
 export NEXT_STAGE_NUM=3-2
 
 python ./examples/run_classifier.py \
@@ -21,9 +22,8 @@ python ./examples/run_classifier.py \
     --learning_rate 5e-5 \
     --weight_decay 0.0001 \
     --num_train_epochs 8.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME} \
     --save_steps 1000 \
-    --do_predict \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv \
-#    --do_eval \
-#    --do_train \
+    --do_eval \
+    --do_train \
+#    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/result.csv

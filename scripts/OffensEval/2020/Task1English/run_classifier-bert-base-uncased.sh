@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-export DATA_DIR=data/OffensEval/Task1
-export TASK_NAME=OffensEvalTask1
+export TASK=OffensEval
+export TASK_NAME=OffensEval2020Task1English
+export DATA_DIR=data/OffensEval/2020/Task1English
 export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=bert
@@ -21,9 +22,9 @@ python ./examples/run_classifier.py \
     --learning_rate 6e-5 \
     --weight_decay 0.001 \
     --num_train_epochs 10.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
     --save_steps 1000 \
     --do_predict \
-    --predict_file ${PREDICT_NAME}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv
+    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM}/result.csv
 #    --do_eval \
 #    --do_train \

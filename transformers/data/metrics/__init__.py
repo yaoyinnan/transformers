@@ -113,19 +113,25 @@ if _has_sklearn:
         assert len(preds) == len(labels)
         if task_name == "fnews":
             return {"acc": simple_accuracy(preds, labels)}
-        elif task_name == "offensevaltask1":
-            return acc_and_f1_macro(preds, labels)
-        elif task_name == "offensevaltask2":
-            return acc_and_f1_macro(preds, labels)
-        elif task_name == "offensevaltask3":
-            return acc_and_f1_macro(preds, labels)
         elif task_name == "fnc-1":
             return classification_report(preds, labels, target_names)
         elif task_name == "wsdm-fakenews":
-            return acc_and_f1_macro(preds, labels)
+            return classification_report(preds, labels, target_names)
         elif task_name == "liar":
-            return acc_and_f1_macro(preds, labels)
+            return classification_report(preds, labels, target_names)
         elif task_name == "fever":
-            return acc_and_f1_macro(preds, labels)
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2019task1":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2019task2":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2019task3":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2020task1english":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2020task2english":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "offenseval2020task3english":
+            return classification_report(preds, labels, target_names)
         else:
             raise KeyError(task_name)
