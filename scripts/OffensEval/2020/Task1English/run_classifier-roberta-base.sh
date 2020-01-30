@@ -6,8 +6,8 @@ export OUTPUT_NAME=output
 export PREDICT_NAME=predict
 export MODEL=roberta
 export MODEL_NAME=roberta-base
-export STAGE_NUM=4
-export NEXT_STAGE_NUM=3-2
+export STAGE_NUM=2
+export NEXT_STAGE_NUM=2-2
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \
@@ -20,10 +20,12 @@ python ./examples/run_classifier.py \
     --per_gpu_eval_batch_size 8   \
     --per_gpu_predict_batch_size 8   \
     --learning_rate 1e-5 \
-    --weight_decay 0.001 \
-    --num_train_epochs 3.0 \
+    --weight_decay 0.0001 \
+    --num_train_epochs 10.0 \
     --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${STAGE_NUM} \
-    --save_steps 1000 \
+    --save_steps 500 \
+    --overwrite_cache \
+    --eval_all_checkpoints \
     --do_eval \
-    --do_train \
+#    --do_train \
 #    --predict_file ${PREDICT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/result.csv

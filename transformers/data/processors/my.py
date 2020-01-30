@@ -374,7 +374,7 @@ class OffensEval2020Task1EnglishProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+            self._read_tsv(os.path.join(data_dir, "88train.tsv")), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
@@ -421,7 +421,7 @@ class FNC1Processor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "train_stances_stage2.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "eda_train_stances_stage2_RD.csv"), '"'),
             self._read_csv(os.path.join(data_dir, "train_bodies.csv"), '"'),
             "train")
 
@@ -435,7 +435,7 @@ class FNC1Processor(DataProcessor):
     def get_predict_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_csv(os.path.join(data_dir, "test_stances.csv"), '"'),
+            self._read_csv(os.path.join(data_dir, "test_stances_stage2.csv"), '"'),
             self._read_csv(os.path.join(data_dir, "test_bodies.csv"), '"'),
             "predict")
 
@@ -448,10 +448,19 @@ class FNC1Processor(DataProcessor):
         examples = []
         # label_list = [860, 2630, 2965, 3145]  # no-balance
         # label_list = [2400, 2400, 2400, 2400] # balance 800
-        label_list = [0, 0, 0, 1600]  # balance 1600(disagree = double)
+        # label_list = [0, 0, 0, 1600]  # balance 1600(disagree = double)
         # label_list = [0, 0, 0, 0]  # balance 800(disagree = one)
         # label_list = [0, 0, 6000, 7200]  # balance 800(disagree = one)
-        max_num = 2400
+
+        # label_list = [0, 0, 1600]  # 三份disagree
+        # max_num = 2400  # 三份disagree
+
+        # label_list = [0, 3200, 5600]  # 二份agree + 八份disagree
+        # max_num = 6400  # 二份agree + 八份disagree
+
+        # label_list = [0, 0, 0]  # eda 16800 * 3
+        # max_num = 16800  # eda 16800 * 3
+
         for (i, line) in enumerate(stance_lines):
             # if i >= len(stance_lines):
             #     break
@@ -502,8 +511,19 @@ class FNC1Processor(DataProcessor):
             # text_a = self.stop_word(text_a, "english")
 
             examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            # if label == self.get_labels()[3]:
+
+            # # 三份disagree
+            # if label == self.get_labels()[2]:
             #     for i in range(0, 2):
+            #         examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+            # # 二份agree
+            # if label == self.get_labels()[1]:
+            #     for i in range(0, 1):
+            #         examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            # # 八份disagree
+            # if label == self.get_labels()[2]:
+            #     for i in range(0, 7):
             #         examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
 
         # print(examples)
@@ -560,7 +580,7 @@ class WSDMFakeNewsProcessor(DataProcessor):
 
 
 class LIARProcessor(DataProcessor):
-    """Processor for the LIARP data set (My version)."""
+    """Processor for the LIAR data set (My version)."""
 
     def get_example_from_tensor_dict(self, tensor_dict):
         """See base class."""
@@ -659,12 +679,68 @@ class FEVERProcessor(DataProcessor):
         return examples
 
 
+class FakedditProcessor(DataProcessor):
+    """Processor for the Fakeddit data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "validate.tsv"), '"'), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["0", "1"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line[0]
+            if set_type == "train":
+                if i >= 10000:
+                    break
+                label = line[13]
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "dev":
+                label = line[13]
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
 my_tasks_num_labels = {
     "fnews": 2,
     "fnc-1": 3,
     "wsdm-fakenews": 3,
     "liar": 6,
     "fever": 3,
+    "fakeddit": 2,
     "offenseval2019task1": 2,
     "offenseval2019task2": 2,
     "offenseval2019task3": 3,
@@ -677,6 +753,7 @@ my_processors = {
     "wsdm-fakenews": WSDMFakeNewsProcessor,
     "liar": LIARProcessor,
     "fever": FEVERProcessor,
+    "fakeddit": FakedditProcessor,
     "offenseval2019task1": OffensEval2019Task1Processor,
     "offenseval2019task2": OffensEval2019Task2Processor,
     "offenseval2019task3": OffensEval2019Task3Processor,
@@ -689,6 +766,7 @@ my_output_modes = {
     "wsdm-fakenews": "classification",
     "liar": "classification",
     "fever": "classification",
+    "fakeddit": "classification",
     "offenseval2019task1": "classification",
     "offenseval2019task2": "classification",
     "offenseval2019task3": "classification",

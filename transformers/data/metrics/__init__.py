@@ -68,9 +68,12 @@ if _has_sklearn:
         }
 
     def classification_report(preds, labels, target_names=None):
+        f1 = metrics.f1_score(y_true=labels, y_pred=preds, average='macro')
         report = metrics.classification_report(y_true=labels, y_pred=preds, target_names=target_names, digits=4)
         return {
             "report": report,
+            "score_name": "macro-f1",
+            "macro-f1": f1,
         }
 
     def pearson_and_spearman(preds, labels):
@@ -120,6 +123,8 @@ if _has_sklearn:
         elif task_name == "liar":
             return classification_report(preds, labels, target_names)
         elif task_name == "fever":
+            return classification_report(preds, labels, target_names)
+        elif task_name == "fakeddit":
             return classification_report(preds, labels, target_names)
         elif task_name == "offenseval2019task1":
             return classification_report(preds, labels, target_names)

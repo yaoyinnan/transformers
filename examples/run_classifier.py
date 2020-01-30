@@ -24,6 +24,7 @@ import os
 import random
 
 import csv
+import shutil
 import numpy as np
 import torch
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
@@ -44,17 +45,17 @@ root_path = os.path.abspath(os.path.dirname(current_directory) + os.path.sep + "
 sys.path.append(root_path)
 
 from transformers import (WEIGHTS_NAME, BertConfig,
-                                  BertForSequenceClassification, BertTokenizer,
-                                  RobertaConfig,
-                                  RobertaForSequenceClassification,
-                                  RobertaTokenizer,
-                                  XLMConfig, XLMForSequenceClassification,
-                                  XLMTokenizer, XLNetConfig,
-                                  XLNetForSequenceClassification,
-                                  XLNetTokenizer,
-                                  DistilBertConfig,
-                                  DistilBertForSequenceClassification,
-                                  DistilBertTokenizer)
+                          BertForSequenceClassification, BertTokenizer,
+                          RobertaConfig,
+                          RobertaForSequenceClassification,
+                          RobertaTokenizer,
+                          XLMConfig, XLMForSequenceClassification,
+                          XLMTokenizer, XLNetConfig,
+                          XLNetForSequenceClassification,
+                          XLNetTokenizer,
+                          DistilBertConfig,
+                          DistilBertForSequenceClassification,
+                          DistilBertTokenizer)
 
 from transformers import AdamW, get_linear_schedule_with_warmup
 
@@ -103,11 +104,13 @@ def train(args, train_dataset, model, tokenizer):
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ['bias', 'LayerNorm.weight']
     optimizer_grouped_parameters = [
-        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': args.weight_decay},
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+         'weight_decay': args.weight_decay},
         {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-        ]
+    ]
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
-    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps, num_training_steps=t_total)
+    scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=args.warmup_steps,
+                                                num_training_steps=t_total)
     if args.fp16:
         try:
             from apex import amp
@@ -131,7 +134,8 @@ def train(args, train_dataset, model, tokenizer):
     logger.info("  Num Epochs = %d", args.num_train_epochs)
     logger.info("  Instantaneous batch size per GPU = %d", args.per_gpu_train_batch_size)
     logger.info("  Total train batch size (w. parallel, distributed & accumulation) = %d",
-                   args.train_batch_size * args.gradient_accumulation_steps * (torch.distributed.get_world_size() if args.local_rank != -1 else 1))
+                args.train_batch_size * args.gradient_accumulation_steps * (
+                    torch.distributed.get_world_size() if args.local_rank != -1 else 1))
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     logger.info("  Total optimization steps = %d", t_total)
 
@@ -145,16 +149,17 @@ def train(args, train_dataset, model, tokenizer):
         for step, batch in enumerate(epoch_iterator):
             model.train()
             batch = tuple(t.to(args.device) for t in batch)
-            inputs = {'input_ids':      batch[0],
+            inputs = {'input_ids': batch[0],
                       'attention_mask': batch[1],
-                      'labels':         batch[3]}
+                      'labels': batch[3]}
             if args.model_type != 'distilbert':
-                inputs['token_type_ids'] = batch[2] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+                inputs['token_type_ids'] = batch[2] if args.model_type in ['bert',
+                                                                           'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
             outputs = model(**inputs)
             loss = outputs[0]  # model outputs are always tuple in transformers (see doc)
 
             if args.n_gpu > 1:
-                loss = loss.mean() # mean() to average on multi-gpu parallel training
+                loss = loss.mean()  # mean() to average on multi-gpu parallel training
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
 
@@ -183,7 +188,7 @@ def train(args, train_dataset, model, tokenizer):
                         for key, value in results.items():
                             tb_writer.add_scalar('eval_{}'.format(key), value, global_step)
                     tb_writer.add_scalar('lr', scheduler.get_lr()[0], global_step)
-                    tb_writer.add_scalar('loss', (tr_loss - logging_loss)/args.logging_steps, global_step)
+                    tb_writer.add_scalar('loss', (tr_loss - logging_loss) / args.logging_steps, global_step)
                     logging_loss = tr_loss
 
                 if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
@@ -191,7 +196,8 @@ def train(args, train_dataset, model, tokenizer):
                     output_dir = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
                     if not os.path.exists(output_dir):
                         os.makedirs(output_dir)
-                    model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
+                    model_to_save = model.module if hasattr(model,
+                                                            'module') else model  # Take care of distributed/parallel training
                     model_to_save.save_pretrained(output_dir)
                     torch.save(args, os.path.join(output_dir, 'training_args.bin'))
                     logger.info("Saving model checkpoint to %s", output_dir)
@@ -217,10 +223,11 @@ def train(args, train_dataset, model, tokenizer):
 def evaluate(args, model, tokenizer, prefix=""):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
-    eval_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (args.output_dir,)
-
+    eval_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" \
+        else (args.output_dir,)
     results = {}
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
+        eval_output_dir += prefix
         eval_dataset, guids = load_and_cache_examples(args, eval_task, tokenizer, evaluate="dev")
         if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(eval_output_dir)
@@ -233,7 +240,6 @@ def evaluate(args, model, tokenizer, prefix=""):
         # multi-gpu eval
         if args.n_gpu > 1:
             model = torch.nn.DataParallel(model)
-
         # Eval!
         logger.info("***** Running evaluation {} *****".format(prefix))
         logger.info("  Num examples = %d", len(eval_dataset))
@@ -247,11 +253,12 @@ def evaluate(args, model, tokenizer, prefix=""):
             batch = tuple(t.to(args.device) for t in batch)
 
             with torch.no_grad():
-                inputs = {'input_ids':      batch[0],
+                inputs = {'input_ids': batch[0],
                           'attention_mask': batch[1],
-                          'labels':         batch[3]}
+                          'labels': batch[3]}
                 if args.model_type != 'distilbert':
-                    inputs['token_type_ids'] = batch[2] if args.model_type in ['bert', 'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+                    inputs['token_type_ids'] = batch[2] if args.model_type in ['bert',
+                                                                               'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
 
@@ -284,27 +291,27 @@ def evaluate(args, model, tokenizer, prefix=""):
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
-            output_result_file = os.path.join(eval_output_dir, "results.csv")
+            output_result_file = os.path.join(eval_output_dir, "report.csv")
             with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
                 predict_file_writer.writerow(headers)
                 for index in range(len(guids)):
                     predict_file_writer.writerow([guids[index], preds[index]])
-                logger.info("Save " + args.predict_file + " down.")
+                logger.info("Save " + eval_output_dir + " down.")
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
 
     return results
 
-
-def predict(args, model, tokenizer, prefix=""):
+def predict(args, model, tokenizer, prefix="best"):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     predict_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
     predict_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (
         args.output_dir,)
 
+    results = {}
     for predict_task, predict_output_dir in zip(predict_task_names, predict_outputs_dirs):
         predict_dataset, guids = load_and_cache_examples(args, predict_task, tokenizer, evaluate="predict")
 
@@ -350,16 +357,32 @@ def predict(args, model, tokenizer, prefix=""):
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
-            with open(args.predict_file, "w", encoding='utf-8', newline='') as predict_file:
+            output_pred_file = os.path.join(predict_output_dir, "/checkpoint-best/predict/", "pred_results.txt")
+            with open(output_pred_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
                 predict_file_writer.writerow(headers)
                 for index in range(len(guids)):
                     predict_file_writer.writerow([guids[index], preds[index]])
-                logger.info("Save " + args.predict_file + " down.")
+                logger.info("Save " + output_pred_file + " down.")
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
+
+        # if args.test_has_label:
+        #     processor = processors[args.task_name]()
+        #     result = compute_metrics(predict_task, preds, out_label_ids, processor.get_labels())
+        #     results.update(result)
+        #
+        #     output_pred_results_file = os.path.join(predict_output_dir, "/checkpoint-best/predict/", "report.txt")
+        #     with open(output_pred_results_file, "w") as writer:
+        #         logger.info("***** Pred results {} *****".format(prefix))
+        #         for key in sorted(result.keys()):
+        #             logger.info("  %s = %s", key, str(result[key]))
+        #             writer.write("%s = %s\n" % (key, str(result[key])))
+        #         logger.info("Save " + output_pred_results_file + " down.")
+        #
+        #     return results
 
 
 def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
@@ -377,7 +400,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
                                                                                    str(task)))
     features = None
     guids = None
-    if os.path.exists(cached_features_file) and (evaluate == "train"):
+    if os.path.exists(cached_features_file) and (evaluate == "train") and not args.overwrite_cache:
         logger.info("Loading features from cached file %s", cached_features_file)
         features = torch.load(cached_features_file)
     else:
@@ -460,7 +483,8 @@ def main():
     parser.add_argument("--model_type", default=None, type=str, required=True,
                         help="Model type selected in the list: " + ", ".join(MODEL_CLASSES.keys()))
     parser.add_argument("--model_name_or_path", default=None, type=str, required=True,
-                        help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(ALL_MODELS))
+                        help="Path to pre-trained model or shortcut name selected in the list: " + ", ".join(
+                            ALL_MODELS))
     parser.add_argument("--task_name", default=None, type=str, required=True,
                         help="The name of the task to train selected in the list: " + ", ".join(processors.keys()))
     parser.add_argument("--output_dir", default=None, type=str, required=True,
@@ -544,12 +568,15 @@ def main():
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
 
-    parser.add_argument('--predict_file', type=str, help="Path to prediction.")
+    parser.add_argument('--test_has_label', type=str, help="Path to prediction.")
 
     args = parser.parse_args()
 
-    if os.path.exists(args.output_dir) and os.listdir(args.output_dir) and args.do_train and not args.overwrite_output_dir:
-        raise ValueError("Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(args.output_dir))
+    if os.path.exists(args.output_dir) and os.listdir(
+            args.output_dir) and args.do_train and not args.overwrite_output_dir:
+        raise ValueError(
+            "Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(
+                args.output_dir))
 
     # Setup distant debugging if needed
     if args.server_ip and args.server_port:
@@ -588,11 +615,11 @@ def main():
         args.xla_model = xm
 
     # Setup logging
-    logging.basicConfig(format = '%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
-                        datefmt = '%m/%d/%Y %H:%M:%S',
-                        level = logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
+    logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message)s',
+                        datefmt='%m/%d/%Y %H:%M:%S',
+                        level=logging.INFO if args.local_rank in [-1, 0] else logging.WARN)
     logger.warning("Process rank: %s, device: %s, n_gpu: %s, distributed training: %s, 16-bits training: %s",
-                    args.local_rank, device, args.n_gpu, bool(args.local_rank != -1), args.fp16)
+                   args.local_rank, device, args.n_gpu, bool(args.local_rank != -1), args.fp16)
 
     # Set seed
     set_seed(args)
@@ -631,13 +658,12 @@ def main():
 
     logger.info("Training/evaluation parameters %s", args)
 
-
+    global_step = None
     # Training
     if args.do_train:
         train_dataset = load_and_cache_examples(args, args.task_name, tokenizer, evaluate="train")
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
-
 
     # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
     if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0) and not args.tpu:
@@ -648,53 +674,66 @@ def main():
         logger.info("Saving model checkpoint to %s", args.output_dir)
         # Save a trained model, configuration and tokenizer using `save_pretrained()`.
         # They can then be reloaded using `from_pretrained()`
-        model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
-        model_to_save.save_pretrained(args.output_dir)
+        model_to_save = model.module if hasattr(model,
+                                                'module') else model  # Take care of distributed/parallel training
+
+        # create end model makedir
+        end_model_path = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
+        if not os.path.exists(end_model_path):
+            os.makedirs(end_model_path)
+
+        model_to_save.save_pretrained(end_model_path)
         tokenizer.save_pretrained(args.output_dir)
 
         # Good practice: save your training arguments together with the trained model
-        torch.save(args, os.path.join(args.output_dir, 'training_args.bin'))
+        torch.save(args, os.path.join(end_model_path, 'training_args.bin'))
 
         # Load a trained model and vocabulary that you have fine-tuned
-        model = model_class.from_pretrained(args.output_dir)
+        model = model_class.from_pretrained(end_model_path)
         tokenizer = tokenizer_class.from_pretrained(args.output_dir)
         model.to(args.device)
-
 
     # Evaluation
     results = {}
     if args.do_eval and args.local_rank in [-1, 0]:
         tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
-        checkpoints = [args.output_dir]
-        if args.eval_all_checkpoints:
-            checkpoints = list(os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
-            logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
-        logger.info("Evaluate the following checkpoints: %s", checkpoints)
-        for checkpoint in checkpoints:
-            global_step = checkpoint.split('-')[-1] if len(checkpoints) > 1 else ""
-            prefix = checkpoint.split('/')[-1] if checkpoint.find('checkpoint') != -1 else ""
-
-            model = model_class.from_pretrained(checkpoint)
-            model.to(args.device)
-            result = evaluate(args, model, tokenizer, prefix=prefix)
-            result = dict((k + '_{}'.format(global_step), v) for k, v in result.items())
-            results.update(result)
-
-    # predicting
-    results = {}
-    if args.do_predict and args.local_rank in [-1, 0]:
-        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
-        checkpoints = [args.output_dir]
+        checkpoints = []
         if args.eval_all_checkpoints:
             checkpoints = list(
                 os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
             logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
+
+        checkpoint_score_max = 0
+        checkpoint_score_max_checkpoint = ""
         for checkpoint in checkpoints:
+            if checkpoint.find("other") != -1:
+                continue
+
             global_step = checkpoint.split('-')[-1] if len(checkpoints) > 1 else ""
+            prefix = ("/" + str(checkpoint.split('\\')[-1])) if checkpoint.find('checkpoint') != -1 else ""
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
-            predict(args, model, tokenizer, prefix=global_step)
+            result = evaluate(args, model, tokenizer, prefix=prefix)
+            result = dict((k + '_{}'.format(global_step), v) for k, v in result.items())
+            results.update(result)
+            checkpoint_score = result[result['score_name_' + global_step] + "_" + global_step]
+            if checkpoint_score > checkpoint_score_max:
+                checkpoint_score_max = checkpoint_score
+                checkpoint_score_max_checkpoint = prefix
+
+        best_checkpoint_path = args.output_dir + "/checkpoint-best"
+        shutil.copytree(args.output_dir + checkpoint_score_max_checkpoint, best_checkpoint_path)
+
+    # predicting
+    results = {}
+    if args.do_predict and args.local_rank in [-1, 0]:
+        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        checkpoint = args.output_dir + "/checkpoint-best"
+        logger.info("Predicting the following best checkpoint: %s", checkpoint)
+        model = model_class.from_pretrained(checkpoint)
+        model.to(args.device)
+        predict(args, model, tokenizer)
 
     return results
 
