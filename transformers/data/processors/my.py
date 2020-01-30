@@ -725,6 +725,7 @@ class FakedditProcessor(DataProcessor):
             elif set_type == "dev":
                 label = line[13]
                 text_a = line[12]
+                text_a = line[12]
                 text_a = self.preprocess(text_a)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
             elif set_type == "predict":
