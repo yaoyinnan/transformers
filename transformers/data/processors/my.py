@@ -716,8 +716,6 @@ class FakedditProcessor(DataProcessor):
                 continue
             guid = line[0]
             if set_type == "train":
-                if i >= 20000:
-                    break
                 label = line[13]
                 text_a = line[12]
                 text_a = self.preprocess(text_a)
