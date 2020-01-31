@@ -126,6 +126,8 @@ if _has_sklearn:
             return classification_report(preds, labels, target_names)
         elif task_name == "fakeddit":
             return classification_report(preds, labels, target_names)
+        elif task_name == "wuhan2019ncov":
+            return classification_report(preds, labels, target_names)
         elif task_name == "offenseval2019task1":
             return classification_report(preds, labels, target_names)
         elif task_name == "offenseval2019task2":

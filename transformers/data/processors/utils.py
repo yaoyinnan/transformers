@@ -149,7 +149,17 @@ class DataProcessor(object):
             return lines
 
     @classmethod
-    def _read_json(cls, input_file):
+    def _read_json_normal(cls, input_file):
+        """Reads a tab separated value file."""
+        with open(input_file, "r", encoding="utf-8-sig") as f:
+            reader = json.load(f)
+            lines = []
+            for index, item in enumerate(reader):
+                lines.append(item)
+            return lines
+
+    @classmethod
+    def _read_json_abnormal(cls, input_file):
         """Reads a tab separated value file."""
         with open(input_file, "r", encoding="utf-8-sig") as f:
             reader = f.read().split("\n")
@@ -222,3 +232,10 @@ class DataProcessor(object):
         text = ' '.join(text)
 
         return text
+
+    def html(self, text):
+        import re
+        dr = re.compile(r'<[^>]+>', re.S)
+        dd = dr.sub('', text)
+
+        return dd

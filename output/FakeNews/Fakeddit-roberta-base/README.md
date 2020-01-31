@@ -1,0 +1,2 @@
+## Fakeddit
+model: roberta-base

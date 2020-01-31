@@ -642,17 +642,17 @@ class FEVERProcessor(DataProcessor):
     def get_train_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_json(os.path.join(data_dir, "train.json")), "train")
+            self._read_json_abnormal(os.path.join(data_dir, "train.json")), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_json(os.path.join(data_dir, "shared_task_dev.json")), "dev")
+            self._read_json_abnormal(os.path.join(data_dir, "shared_task_dev.json")), "dev")
 
     def get_predict_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_json(os.path.join(data_dir, "shared_task_test.json")), "predict")
+            self._read_json_abnormal(os.path.join(data_dir, "shared_task_test.json")), "predict")
 
     def get_labels(self):
         """See base class."""
@@ -716,7 +716,7 @@ class FakedditProcessor(DataProcessor):
                 continue
             guid = line[0]
             if set_type == "train":
-                if i >= 10000:
+                if i >= 20000:
                     break
                 label = line[13]
                 text_a = line[12]
@@ -725,11 +725,84 @@ class FakedditProcessor(DataProcessor):
             elif set_type == "dev":
                 label = line[13]
                 text_a = line[12]
-                text_a = line[12]
                 text_a = self.preprocess(text_a)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
             elif set_type == "predict":
                 text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class wuhan2019ncovProcessor(DataProcessor):
+    """Processor for the FEVER data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json_normal(os.path.join(data_dir, "train.json")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json_normal(os.path.join(data_dir, "dev.json")), "dev")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_json_normal(os.path.join(data_dir, "test.json")), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ["false", "true"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            guid = line['id']
+            if set_type == "train":
+                label = line['markstyle']
+                if label == "fake":
+                    label = self.get_labels()[0]
+
+                if label == "doubt":
+                    continue
+
+                text_a = line['title']
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+                if label == self.get_labels()[0]:
+                    label = self.get_labels()[1]
+                text_a = line['check_content_points']
+                text_a = self.html(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+            elif set_type == "dev":
+                label = line['rumorType']
+
+                if label == 2:
+                    continue
+
+                label = self.get_labels()[label]
+
+                text_a = line['title']
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+                if label == self.get_labels()[0]:
+                    label = self.get_labels()[1]
+                text_a = line['body']
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+
+            elif set_type == "predict":
+                text_a = line['claim']
                 text_a = self.preprocess(text_a)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
         return examples
@@ -742,6 +815,7 @@ my_tasks_num_labels = {
     "liar": 6,
     "fever": 3,
     "fakeddit": 2,
+    "wuhan2019ncov": 2,
     "offenseval2019task1": 2,
     "offenseval2019task2": 2,
     "offenseval2019task3": 3,
@@ -755,6 +829,7 @@ my_processors = {
     "liar": LIARProcessor,
     "fever": FEVERProcessor,
     "fakeddit": FakedditProcessor,
+    "wuhan2019ncov": wuhan2019ncovProcessor,
     "offenseval2019task1": OffensEval2019Task1Processor,
     "offenseval2019task2": OffensEval2019Task2Processor,
     "offenseval2019task3": OffensEval2019Task3Processor,
@@ -768,6 +843,7 @@ my_output_modes = {
     "liar": "classification",
     "fever": "classification",
     "fakeddit": "classification",
+    "wuhan2019ncov": "classification",
     "offenseval2019task1": "classification",
     "offenseval2019task2": "classification",
     "offenseval2019task3": "classification",
