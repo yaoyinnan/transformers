@@ -125,7 +125,7 @@ def my_convert_examples_to_features(examples,
                                                                                             max_length)
 
         label = None
-        if evaluate == "train" or evaluate == "dev":
+        if evaluate in ["train", "dev", "test"]:
             if output_mode == "classification":
                 label = label_map[example.label]
             elif output_mode == "regression":
@@ -168,7 +168,7 @@ def my_convert_examples_to_features(examples,
 
     if evaluate == "train":
         return features
-    elif evaluate == "dev" or evaluate == "predict":
+    elif evaluate in ["dev", "test", "predict"]:
         return features, guids
 
 
@@ -699,10 +699,15 @@ class FakedditProcessor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "validate.tsv"), '"'), "dev")
 
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "test")
+
     def get_predict_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "predict")
+            self._read_tsv(os.path.join(data_dir, "predict.tsv"), '"'), "predict")
 
     def get_labels(self):
         """See base class."""
@@ -723,6 +728,11 @@ class FakedditProcessor(DataProcessor):
             elif set_type == "dev":
                 label = line[13]
                 text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "test":
+                label = line[14]
+                text_a = line[13]
                 text_a = self.preprocess(text_a)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
             elif set_type == "predict":

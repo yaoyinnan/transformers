@@ -280,7 +280,7 @@ def evaluate(args, model, tokenizer, prefix=""):
         result = compute_metrics(eval_task, preds, out_label_ids, processor.get_labels())
         results.update(result)
 
-        output_eval_file = os.path.join(eval_output_dir, "eval_results.txt")
+        output_eval_file = os.path.join(eval_output_dir, "eval_report.txt")
         with open(output_eval_file, "w") as writer:
             logger.info("***** Eval results {} *****".format(prefix))
             for key in sorted(result.keys()):
@@ -291,7 +291,7 @@ def evaluate(args, model, tokenizer, prefix=""):
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
-            output_result_file = os.path.join(eval_output_dir, "report.csv")
+            output_result_file = os.path.join(eval_output_dir, "eval_results.csv")
             with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
@@ -305,7 +305,94 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     return results
 
-def predict(args, model, tokenizer, prefix="best"):
+
+def test(args, model, tokenizer, prefix=""):
+    # Loop to handle MNLI double evaluation (matched, mis-matched)
+    test_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
+    test_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" \
+        else (args.output_dir,)
+    results = {}
+    for test_task, test_output_dir in zip(test_task_names, test_outputs_dirs):
+        test_output_dir += prefix
+        test_dataset, guids = load_and_cache_examples(args, test_task, tokenizer, evaluate="test")
+        if not os.path.exists(test_output_dir) and args.local_rank in [-1, 0]:
+            os.makedirs(test_output_dir)
+
+        args.test_batch_size = args.per_gpu_test_batch_size * max(1, args.n_gpu)
+        # Note that DistributedSampler samples randomly
+        test_sampler = SequentialSampler(test_dataset) if args.local_rank == -1 else DistributedSampler(test_dataset)
+        test_dataloader = DataLoader(test_dataset, sampler=test_sampler, batch_size=args.test_batch_size)
+
+        # multi-gpu test
+        if args.n_gpu > 1:
+            model = torch.nn.DataParallel(model)
+        # Test!
+        logger.info("***** Running testing {} *****".format(prefix))
+        logger.info("  Num examples = %d", len(test_dataset))
+        logger.info("  Batch size = %d", args.test_batch_size)
+        test_loss = 0.0
+        nb_test_steps = 0
+        preds = None
+        out_label_ids = None
+        for batch in tqdm(test_dataloader, desc="testuating"):
+            model.eval()
+            batch = tuple(t.to(args.device) for t in batch)
+
+            with torch.no_grad():
+                inputs = {'input_ids': batch[0],
+                          'attention_mask': batch[1],
+                          'labels': batch[3]}
+                if args.model_type != 'distilbert':
+                    inputs['token_type_ids'] = batch[2] if args.model_type in ['bert',
+                                                                               'xlnet'] else None  # XLM, DistilBERT and RoBERTa don't use segment_ids
+                outputs = model(**inputs)
+                tmp_test_loss, logits = outputs[:2]
+
+                test_loss += tmp_test_loss.mean().item()
+            nb_test_steps += 1
+            if preds is None:
+                preds = logits.detach().cpu().numpy()
+                out_label_ids = inputs['labels'].detach().cpu().numpy()
+            else:
+                preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+                out_label_ids = np.append(out_label_ids, inputs['labels'].detach().cpu().numpy(), axis=0)
+
+        test_loss = test_loss / nb_test_steps
+        if args.output_mode == "classification":
+            preds = np.argmax(preds, axis=1)
+        elif args.output_mode == "regression":
+            preds = np.squeeze(preds)
+        processor = processors[args.task_name]()
+        result = compute_metrics(test_task, preds, out_label_ids, processor.get_labels())
+        results.update(result)
+
+        output_test_file = os.path.join(test_output_dir, "test_report.txt")
+        with open(output_test_file, "w") as writer:
+            logger.info("***** Test results {} *****".format(prefix))
+            for key in sorted(result.keys()):
+                logger.info("  %s = %s", key, str(result[key]))
+                writer.write("%s = %s\n" % (key, str(result[key])))
+            writer.write("%s = %s\n" % ("loss", str(test_loss)))
+
+        preds = processor.label_index_to_label(preds)
+
+        if len(guids) == len(preds):
+            output_result_file = os.path.join(test_output_dir, "test_results.csv")
+            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
+                predict_file_writer = csv.writer(predict_file, delimiter=',')
+                headers = ["id", "label"]
+                predict_file_writer.writerow(headers)
+                for index in range(len(guids)):
+                    predict_file_writer.writerow([guids[index], preds[index]])
+                logger.info("Save " + test_output_dir + " down.")
+        else:
+            raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
+                len(guids), len(preds)))
+
+    return results
+
+
+def predict(args, model, tokenizer, prefix=""):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     predict_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
     predict_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (
@@ -313,6 +400,7 @@ def predict(args, model, tokenizer, prefix="best"):
 
     results = {}
     for predict_task, predict_output_dir in zip(predict_task_names, predict_outputs_dirs):
+        predict_output_dir += prefix
         predict_dataset, guids = load_and_cache_examples(args, predict_task, tokenizer, evaluate="predict")
 
         if not os.path.exists(predict_output_dir) and args.local_rank in [-1, 0]:
@@ -357,7 +445,7 @@ def predict(args, model, tokenizer, prefix="best"):
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
-            output_pred_file = os.path.join(predict_output_dir, "/checkpoint-best/predict/", "pred_results.txt")
+            output_pred_file = os.path.join(predict_output_dir, "pred_results.txt")
             with open(output_pred_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
@@ -369,20 +457,7 @@ def predict(args, model, tokenizer, prefix="best"):
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
 
-        # if args.test_has_label:
-        #     processor = processors[args.task_name]()
-        #     result = compute_metrics(predict_task, preds, out_label_ids, processor.get_labels())
-        #     results.update(result)
-        #
-        #     output_pred_results_file = os.path.join(predict_output_dir, "/checkpoint-best/predict/", "report.txt")
-        #     with open(output_pred_results_file, "w") as writer:
-        #         logger.info("***** Pred results {} *****".format(prefix))
-        #         for key in sorted(result.keys()):
-        #             logger.info("  %s = %s", key, str(result[key]))
-        #             writer.write("%s = %s\n" % (key, str(result[key])))
-        #         logger.info("Save " + output_pred_results_file + " down.")
-        #
-        #     return results
+    return results
 
 
 def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
@@ -414,6 +489,8 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
             examples = processor.get_train_examples(args.data_dir)
         elif evaluate == "dev":
             examples = processor.get_dev_examples(args.data_dir)
+        elif evaluate == "test":
+            examples = processor.get_test_examples(args.data_dir)
         elif evaluate == "predict":
             examples = processor.get_predict_examples(args.data_dir)
         if evaluate == "train":
@@ -428,7 +505,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
                                                     pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
                                                     pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
                                                     )
-        elif evaluate == "dev" or evaluate == "predict":
+        elif evaluate in ["train", "dev", "test"]:
             features, guids = convert_examples_to_features(examples,
                                                            evaluate,
                                                            tokenizer,
@@ -456,21 +533,21 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
     all_token_type_ids = torch.tensor([f.token_type_ids for f in features], dtype=torch.long)
 
     all_labels = None
-    if evaluate == "train" or evaluate == "dev":
+    if evaluate in ["train", "dev", "test"]:
         if output_mode == "classification":
             all_labels = torch.tensor([f.label for f in features], dtype=torch.long)
         elif output_mode == "regression":
             all_labels = torch.tensor([f.label for f in features], dtype=torch.float)
 
     dataset = None
-    if evaluate == "train" or evaluate == "dev":
+    if evaluate in ["train", "dev", "test"]:
         dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
     elif evaluate == "predict":
         dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids)
 
     if evaluate == "train":
         return dataset
-    elif evaluate == "dev" or evaluate == "predict":
+    elif evaluate in ["dev", "test", "predict"]:
         return dataset, guids
 
 
@@ -504,6 +581,8 @@ def main():
                         help="Whether to run training.")
     parser.add_argument("--do_eval", action='store_true',
                         help="Whether to run eval on the dev set.")
+    parser.add_argument("--do_test", action='store_true',
+                        help="Whether to run test on the test set.")
     parser.add_argument("--do_predict", action='store_true',
                         help="Whether to run predict on the predict set.")
     parser.add_argument("--evaluate_during_training", action='store_true',
@@ -514,6 +593,8 @@ def main():
     parser.add_argument("--per_gpu_train_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for training.")
     parser.add_argument("--per_gpu_eval_batch_size", default=8, type=int,
+                        help="Batch size per GPU/CPU for evaluation.")
+    parser.add_argument("--per_gpu_test_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--per_gpu_predict_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for predicting.")
@@ -567,8 +648,6 @@ def main():
                         help="For distributed training: local_rank")
     parser.add_argument('--server_ip', type=str, default='', help="For distant debugging.")
     parser.add_argument('--server_port', type=str, default='', help="For distant debugging.")
-
-    parser.add_argument('--test_has_label', type=str, help="Path to prediction.")
 
     args = parser.parse_args()
 
@@ -725,15 +804,27 @@ def main():
         best_checkpoint_path = args.output_dir + "/checkpoint-best"
         shutil.copytree(args.output_dir + checkpoint_score_max_checkpoint, best_checkpoint_path)
 
-    # predicting
+    # testing
     results = {}
-    if args.do_predict and args.local_rank in [-1, 0]:
+    if args.do_test and args.local_rank in [-1, 0]:
         tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        prefix = "/checkpoint-best/test"
         checkpoint = args.output_dir + "/checkpoint-best"
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
         model = model_class.from_pretrained(checkpoint)
         model.to(args.device)
-        predict(args, model, tokenizer)
+        test(args, model, tokenizer, prefix=prefix)
+
+    # predicting
+    results = {}
+    if args.do_predict and args.local_rank in [-1, 0]:
+        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        prefix = "/checkpoint-best/predict"
+        checkpoint = args.output_dir + "/checkpoint-best"
+        logger.info("Predicting the following best checkpoint: %s", checkpoint)
+        model = model_class.from_pretrained(checkpoint)
+        model.to(args.device)
+        predict(args, model, tokenizer, prefix=prefix)
 
     return results
 

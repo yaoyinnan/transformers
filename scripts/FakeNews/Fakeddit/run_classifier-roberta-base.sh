@@ -28,14 +28,16 @@ python ./examples/run_classifier.py \
     --max_seq_length ${DEFAULT_MAX_SEQ_LENGTH} \
     --per_gpu_train_batch_size ${BATCH_SIZE}   \
     --per_gpu_eval_batch_size ${BATCH_SIZE}   \
+    --per_gpu_test_batch_size ${BATCH_SIZE}   \
     --per_gpu_predict_batch_size ${BATCH_SIZE}   \
     --learning_rate 1e-5 \
     --weight_decay 0.0001 \
-    --num_train_epochs 3.0 \
+    --num_train_epochs 1.0 \
     --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${DEFAULT_SAVE_STEPS} \
     --overwrite_cache \
     --eval_all_checkpoints \
     --do_eval \
     --do_train \
+    --do_test \
 #    --do_predict \
