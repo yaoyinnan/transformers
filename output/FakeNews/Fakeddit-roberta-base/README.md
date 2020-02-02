@@ -28,12 +28,27 @@ roberta-base
 
 stage_1:
 
-stage_2: 顺序1W， 3epoch，f1-macro=0.7824
+stage_2: 顺序1W， 3epoch
 
-stage_3: 平衡2W， 1epoch，f1-macro=0.8076
+    dev：f1-macro = 0.7824
+    test: f1-macro = 0.7864
 
-stage_4: 平衡1W， 5epoch，f1-macro=0.8033
+stage_3: 平衡2W， 1epoch
 
-stage_5: 平衡4W， 1epoch，f1-macro=0.8139
+    dev：f1-macro = 0.8076
+    test: f1-macro = 
 
-stage_5: 平衡10W， 1epoch，f1-macro=0.8300
+stage_4: 平衡1W， 5epoch
+
+    dev：f1-macro = 0.8033
+    test: f1-macro = 
+
+stage_5: 平衡4W， 1epoch
+
+    dev：f1-macro = 0.8139
+    test: f1-macro = 0.8141
+
+stage_5: 平衡10W， 1epoch
+
+    dev：f1-macro = 0.8300
+    test: f1-macro = 0.8311
