@@ -19,7 +19,7 @@ import argparse
 import logging
 import os
 
-from transformers import (
+from . import (
     ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
     BERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
     CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,

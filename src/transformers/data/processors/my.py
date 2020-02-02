@@ -13,13 +13,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-""" fnews processors and helpers """
+""" My processors and helpers """
 
 import logging
 import os
 
-from .utils import DataProcessor, InputExample, InputFeatures
 from ...file_utils import is_tf_available
+from .utils import DataProcessor, InputExample, InputFeatures
 
 if is_tf_available():
     import tensorflow as tf
@@ -45,7 +45,7 @@ def my_convert_examples_to_features(examples,
         examples: List of ``InputExamples`` or ``tf.data.Dataset`` containing the examples.
         tokenizer: Instance of a tokenizer that will tokenize the examples
         max_length: Maximum example length
-        task: fnews task
+        task: My task
         label_list: List of labels. Can be obtained from the processor using the ``processor.get_labels()`` method
         output_mode: String indicating the output mode. Either ``regression`` or ``classification``
         pad_on_left: If set to ``True``, the examples will be padded on the left rather than on the right (default)
@@ -90,17 +90,17 @@ def my_convert_examples_to_features(examples,
     features = []
     guids = []
     for (ex_index, example) in enumerate(examples):
-        if ex_index % 10000 == 0:
-            logger.info("Writing example %d" % (ex_index))
+        len_examples = 0
         if is_tf_dataset:
             example = processor.get_example_from_tensor_dict(example)
             example = processor.tfds_map(example)
-        inputs = tokenizer.encode_plus(
-            example.text_a,
-            example.text_b,
-            add_special_tokens=True,
-            max_length=max_length,
-        )
+            len_examples = tf.data.experimental.cardinality(examples)
+        else:
+            len_examples = len(examples)
+        if ex_index % 10000 == 0:
+            logger.info("Writing example %d/%d" % (ex_index, len_examples))
+
+        inputs = tokenizer.encode_plus(example.text_a, example.text_b, add_special_tokens=True, max_length=max_length,)
         input_ids, token_type_ids = inputs["input_ids"], inputs["token_type_ids"]
 
         # The mask has 1 for real tokens and 0 for padding tokens. Only real
@@ -119,10 +119,12 @@ def my_convert_examples_to_features(examples,
             token_type_ids = token_type_ids + ([pad_token_segment_id] * padding_length)
 
         assert len(input_ids) == max_length, "Error with input length {} vs {}".format(len(input_ids), max_length)
-        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(len(attention_mask),
-                                                                                            max_length)
-        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(len(token_type_ids),
-                                                                                            max_length)
+        assert len(attention_mask) == max_length, "Error with input length {} vs {}".format(
+            len(attention_mask), max_length
+        )
+        assert len(token_type_ids) == max_length, "Error with input length {} vs {}".format(
+            len(token_type_ids), max_length
+        )
 
         label = None
         if evaluate in ["train", "dev", "test"]:
@@ -135,36 +137,43 @@ def my_convert_examples_to_features(examples,
 
         if ex_index < 5:
             logger.info("*** Example ***")
+            logger.info("guid: %s" % (example.guid))
             logger.info("input_ids: %s" % " ".join([str(x) for x in input_ids]))
             logger.info("attention_mask: %s" % " ".join([str(x) for x in attention_mask]))
             logger.info("token_type_ids: %s" % " ".join([str(x) for x in token_type_ids]))
-            if evaluate == "train" or evaluate == "dev":
+            if evaluate in ["train", "dev", "test"]:
                 logger.info("label: %s (id = %d)" % (example.label, label))
         features.append(
-            InputFeatures(input_ids=input_ids,
-                          attention_mask=attention_mask,
-                          token_type_ids=token_type_ids,
-                          label=label))
-
-        guids.append(example.guid)
+            InputFeatures(
+                input_ids=input_ids, attention_mask=attention_mask, token_type_ids=token_type_ids, label=label
+            )
+        )
 
     if is_tf_available() and is_tf_dataset:
+
         def gen():
             for ex in features:
-                yield ({'input_ids': ex.input_ids,
-                        'attention_mask': ex.attention_mask,
-                        'token_type_ids': ex.token_type_ids},
-                       ex.label)
+                yield (
+                    {
+                        "input_ids": ex.input_ids,
+                        "attention_mask": ex.attention_mask,
+                        "token_type_ids": ex.token_type_ids,
+                    },
+                    ex.label,
+                )
 
-        return tf.data.Dataset.from_generator(gen,
-                                              ({'input_ids': tf.int32,
-                                                'attention_mask': tf.int32,
-                                                'token_type_ids': tf.int32},
-                                               tf.int64),
-                                              ({'input_ids': tf.TensorShape([None]),
-                                                'attention_mask': tf.TensorShape([None]),
-                                                'token_type_ids': tf.TensorShape([None])},
-                                               tf.TensorShape([])))
+        return tf.data.Dataset.from_generator(
+            gen,
+            ({"input_ids": tf.int32, "attention_mask": tf.int32, "token_type_ids": tf.int32}, tf.int64),
+            (
+                {
+                    "input_ids": tf.TensorShape([None]),
+                    "attention_mask": tf.TensorShape([None]),
+                    "token_type_ids": tf.TensorShape([None]),
+                },
+                tf.TensorShape([]),
+            ),
+        )
 
     if evaluate == "train":
         return features
@@ -184,6 +193,7 @@ class FnewsProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
@@ -232,6 +242,7 @@ class OffensEval2019Task1Processor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
@@ -279,6 +290,7 @@ class OffensEval2019Task2Processor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
@@ -326,6 +338,7 @@ class OffensEval2019Task3Processor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
@@ -373,6 +386,7 @@ class OffensEval2020Task1EnglishProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "88train.tsv")), "train")
 
@@ -420,6 +434,7 @@ class FNC1Processor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_csv(os.path.join(data_dir, "eda_train_stances_stage2_RD.csv"), '"'),
             self._read_csv(os.path.join(data_dir, "train_bodies.csv"), '"'),
@@ -542,6 +557,7 @@ class WSDMFakeNewsProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_csv(os.path.join(data_dir, "train.csv"), '"'), "train")
 
@@ -591,6 +607,7 @@ class LIARProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
 
@@ -641,6 +658,7 @@ class FEVERProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_json_abnormal(os.path.join(data_dir, "train.json")), "train")
 
@@ -691,8 +709,9 @@ class FakedditProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train_100000.tsv")))
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
+            self._read_tsv(os.path.join(data_dir, "train_100000.tsv"), '"'), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
@@ -754,6 +773,7 @@ class wuhan2019ncovProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
             self._read_json_normal(os.path.join(data_dir, "train.json")), "train")
 
