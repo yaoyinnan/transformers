@@ -36,19 +36,19 @@ stage_2: 顺序1W， 3epoch
 stage_3: 平衡2W， 1epoch
 
     dev：f1-macro = 0.8076
-    test: f1-macro = 
+    test: f1-macro = 0.8096
 
 stage_4: 平衡1W， 5epoch
 
     dev：f1-macro = 0.8033
-    test: f1-macro = 
+    test: f1-macro = 0.8023
 
 stage_5: 平衡4W， 1epoch
 
     dev：f1-macro = 0.8139
     test: f1-macro = 0.8141
 
-stage_5: 平衡10W， 1epoch
+stage_6: 平衡10W， 1epoch
 
     dev：f1-macro = 0.8300
     test: f1-macro = 0.8311

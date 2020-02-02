@@ -406,7 +406,7 @@ def predict(args, model, tokenizer, prefix=""):
         if not os.path.exists(predict_output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(predict_output_dir)
 
-        args.predict_batch_size = args.per_gpu_predict_batch_size * max(1, args.n_gpu)
+        args.predict_batch_size = args.per_gpu_pred_batch_size * max(1, args.n_gpu)
         # Note that DistributedSampler samples randomly
         predict_sampler = SequentialSampler(predict_dataset) if args.local_rank == -1 else DistributedSampler(
             predict_dataset)
@@ -596,7 +596,7 @@ def main():
                         help="Batch size per GPU/CPU for evaluation.")
     parser.add_argument("--per_gpu_test_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for evaluation.")
-    parser.add_argument("--per_gpu_predict_batch_size", default=8, type=int,
+    parser.add_argument("--per_gpu_pred_batch_size", default=8, type=int,
                         help="Batch size per GPU/CPU for predicting.")
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
                         help="Number of updates steps to accumulate before performing a backward/update pass.")
