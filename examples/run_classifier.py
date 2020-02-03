@@ -187,6 +187,9 @@ def train(args, train_dataset, model, tokenizer):
     logger.info("  Gradient Accumulation steps = %d", args.gradient_accumulation_steps)
     logger.info("  Total optimization steps = %d", t_total)
 
+    # 计算最大steps
+    args.max_steps = len(train_dataset) * args.num_train_epochs / args.per_gpu_train_batch_size
+
     global_step = 0
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
@@ -270,7 +273,7 @@ def train(args, train_dataset, model, tokenizer):
                         tb_writer.add_scalar(key, value, global_step)
                     print(json.dumps({**logs, **{"step": global_step}}))
 
-                if args.local_rank in [-1, 0] and args.save_steps > 0 and global_step % args.save_steps == 0:
+                if args.local_rank in [-1, 0] and args.save_steps > 0 and (global_step % args.save_steps == 0 or global_step == args.max_steps):
                     # Save model checkpoint
                     output_dir = os.path.join(args.output_dir, "checkpoint-{}".format(global_step))
                     if not os.path.exists(output_dir):
@@ -874,38 +877,37 @@ def main():
         global_step, tr_loss = train(args, train_dataset, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
-    # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
-    if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
-        # Create output directory if needed
-        if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
-            os.makedirs(args.output_dir)
-
-        logger.info("Saving model checkpoint to %s", args.output_dir)
-        # Save a trained model, configuration and tokenizer using `save_pretrained()`.
-        # They can then be reloaded using `from_pretrained()`
-        model_to_save = model.module if hasattr(model,
-                                                'module') else model  # Take care of distributed/parallel training
-
-        # create end model makedir
-        end_model_path = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
-        if not os.path.exists(end_model_path):
-            os.makedirs(end_model_path)
-
-        model_to_save.save_pretrained(end_model_path)
-        tokenizer.save_pretrained(args.output_dir)
-
-        # Good practice: save your training arguments together with the trained model
-        torch.save(args, os.path.join(end_model_path, 'training_args.bin'))
-
-        # Load a trained model and vocabulary that you have fine-tuned
-        model = model_class.from_pretrained(end_model_path)
-        tokenizer = tokenizer_class.from_pretrained(args.output_dir)
-        model.to(args.device)
+    # # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
+    # if args.do_train and (args.local_rank == -1 or torch.distributed.get_rank() == 0):
+    #     # Create output directory if needed
+    #     if not os.path.exists(args.output_dir) and args.local_rank in [-1, 0]:
+    #         os.makedirs(args.output_dir)
+    #
+    #     logger.info("Saving model checkpoint to %s", args.output_dir)
+    #     # Save a trained model, configuration and tokenizer using `save_pretrained()`.
+    #     # They can then be reloaded using `from_pretrained()`
+    #     model_to_save = model.module if hasattr(model,
+    #                                             'module') else model  # Take care of distributed/parallel training
+    #
+    #     # create end model makedir
+    #     end_model_path = os.path.join(args.output_dir, 'checkpoint-{}'.format(global_step))
+    #     if not os.path.exists(end_model_path):
+    #         os.makedirs(end_model_path)
+    #
+    #     model_to_save.save_pretrained(end_model_path)
+    #     tokenizer.save_pretrained(end_model_path)
+    #
+    #     # Good practice: save your training arguments together with the trained model
+    #     torch.save(args, os.path.join(end_model_path, 'training_args.bin'))
+    #
+    #     # Load a trained model and vocabulary that you have fine-tuned
+    #     model = model_class.from_pretrained(end_model_path)
+    #     tokenizer = tokenizer_class.from_pretrained(end_model_path)
+    #     model.to(args.device)
 
     # Evaluation
     results = {}
     if args.do_eval and args.local_rank in [-1, 0]:
-        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
         checkpoints = []
         if args.eval_all_checkpoints:
             checkpoints = list(
@@ -916,13 +918,12 @@ def main():
         checkpoint_score_max = 0
         checkpoint_score_max_checkpoint = ""
         for checkpoint in checkpoints:
-            if checkpoint.find("other") != -1:
-                continue
-
             global_step = checkpoint.split('-')[-1] if len(checkpoints) > 1 else ""
             prefix = ("/" + str(checkpoint.split('\\')[-1])) if checkpoint.find('checkpoint') != -1 else ""
+            model_path = args.output_dir + prefix
             model = model_class.from_pretrained(checkpoint)
             model.to(args.device)
+            tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
             result = evaluate(args, model, tokenizer, prefix=prefix)
             result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
             results.update(result)

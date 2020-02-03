@@ -41,5 +41,5 @@ python ./examples/run_classifier.py \
     --eval_all_checkpoints \
     --do_test \
     --do_eval \
-    --do_train \
+#    --do_train \
 #    --do_predict \

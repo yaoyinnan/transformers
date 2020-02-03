@@ -149,6 +149,8 @@ def my_convert_examples_to_features(examples,
             )
         )
 
+        guids.append(example.guid)
+
     if is_tf_available() and is_tf_dataset:
 
         def gen():
