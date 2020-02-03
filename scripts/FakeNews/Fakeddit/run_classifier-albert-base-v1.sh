@@ -34,12 +34,12 @@ python ./examples/run_classifier.py \
     --per_gpu_pred_batch_size ${EVAL_BATCH_SIZE}   \
     --learning_rate 1e-5 \
     --weight_decay 0.0001 \
-    --num_train_epochs 3.0 \
+    --num_train_epochs 1.0 \
     --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${DEFAULT_SAVE_STEPS} \
     --overwrite_cache \
     --eval_all_checkpoints \
     --do_test \
     --do_eval \
-#    --do_train \
+    --do_train \
 #    --do_predict \

@@ -9,19 +9,17 @@ export PREDICT_NAME=predict
 export MODEL=bert
 export MODEL_NAME=bert-base-chinese
 
+export TRAIN_BATCH_SIZE=8
+export EVAL_BATCH_SIZE=256
 export DEFAULT_BATCH_SIZE=8
-export BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=25
-export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
+export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
 export DEFAULT_MAX_SEQ_LENGTH=128
-export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
+export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=5
 
-export PRED_BATCH_SIZE=256
-export EVAL_BATCH_SIZE=256
-export TEST_BATCH_SIZE=256
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \
@@ -30,13 +28,13 @@ python ./examples/run_classifier.py \
     --do_lower_case \
     --data_dir ${DATA_DIR} \
     --max_seq_length ${MAX_SEQ_LENGTH} \
-    --per_gpu_train_batch_size ${BATCH_SIZE}   \
+    --per_gpu_train_batch_size ${TRAIN_BATCH_SIZE}   \
     --per_gpu_eval_batch_size ${EVAL_BATCH_SIZE}   \
-    --per_gpu_test_batch_size ${TEST_BATCH_SIZE}   \
-    --per_gpu_pred_batch_size ${PRED_BATCH_SIZE}   \
+    --per_gpu_test_batch_size ${EVAL_BATCH_SIZE}   \
+    --per_gpu_pred_batch_size ${EVAL_BATCH_SIZE}   \
     --learning_rate 5e-5 \
     --weight_decay 0.0001 \
-    --num_train_epochs 10.0 \
+    --num_train_epochs 1.0 \
     --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${DEFAULT_SAVE_STEPS} \
     --overwrite_cache \

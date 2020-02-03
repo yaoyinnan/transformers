@@ -188,7 +188,8 @@ def train(args, train_dataset, model, tokenizer):
     logger.info("  Total optimization steps = %d", t_total)
 
     # 计算最大steps
-    args.max_steps = len(train_dataset) * args.num_train_epochs / args.per_gpu_train_batch_size
+    import math
+    args.max_steps = math.ceil((len(train_dataset) * args.num_train_epochs / args.per_gpu_train_batch_size))
 
     global_step = 0
     epochs_trained = 0
