@@ -26,7 +26,9 @@ roberta-base
 
 ### results
 
-stage_1:
+stage_1: 平衡49W，1epoch
+
+    dev: f1-marco = 0.8591
 
 stage_2: 顺序1W， 3epoch
 
