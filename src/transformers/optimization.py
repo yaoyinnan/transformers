@@ -18,7 +18,7 @@ import logging
 import math
 
 import torch
-from torch.optim import Optimizer
+from torch.optim.optimizer import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
 

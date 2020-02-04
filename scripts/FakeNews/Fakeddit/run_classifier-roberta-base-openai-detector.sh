@@ -5,11 +5,10 @@ export TASK=FakeNews
 export TASK_NAME=Fakeddit
 export DATA_DIR=data/${TASK}/${TASK_NAME}
 export OUTPUT_NAME=output
-export PREDICT_NAME=predict
 export MODEL=roberta
 export MODEL_NAME=roberta-base-openai-detector
 
-export TRAIN_BATCH_SIZE=16
+export TRAIN_BATCH_SIZE=4
 export EVAL_BATCH_SIZE=256
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=1000
@@ -41,5 +40,5 @@ python ./examples/run_classifier.py \
     --eval_all_checkpoints \
     --do_test \
     --do_eval \
-    --do_train \
+#    --do_train \
 #    --do_predict \

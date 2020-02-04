@@ -9,7 +9,7 @@ export PREDICT_NAME=predict
 export MODEL=albert
 export MODEL_NAME=albert-base-v1
 
-export TRAIN_BATCH_SIZE=256
+export TRAIN_BATCH_SIZE=16
 export EVAL_BATCH_SIZE=256
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=1000

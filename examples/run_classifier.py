@@ -939,7 +939,8 @@ def main():
     # testing
     results = {}
     if args.do_test and args.local_rank in [-1, 0]:
-        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        model_path = args.output_dir + "/checkpoint-best"
+        tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
         prefix = "/checkpoint-best/test"
         checkpoint = args.output_dir + "/checkpoint-best"
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
@@ -950,7 +951,8 @@ def main():
     # predicting
     results = {}
     if args.do_predict and args.local_rank in [-1, 0]:
-        tokenizer = tokenizer_class.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
+        model_path = args.output_dir + "/checkpoint-best"
+        tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
         prefix = "/checkpoint-best/predict"
         checkpoint = args.output_dir + "/checkpoint-best"
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
