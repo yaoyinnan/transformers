@@ -133,21 +133,13 @@ if _has_sklearn:
             return classification_report(preds, labels, target_names)
         elif task_name == "fever":
             return classification_report(preds, labels, target_names)
-        elif task_name == "fakeddit":
+        elif task_name in ["fakeddit2way", "fakeddit3way", "fakeddit5way"]:
             return classification_report(preds, labels, target_names)
         elif task_name == "wuhan2019ncov":
             return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2019task1":
+        elif task_name in ["offenseval2019task1", "offenseval2019task2", "offenseval2019task3"]:
             return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2019task2":
-            return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2019task3":
-            return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2020task1english":
-            return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2020task2english":
-            return classification_report(preds, labels, target_names)
-        elif task_name == "offenseval2020task3english":
+        elif task_name in ["offenseval2020task1english", "offenseval2020task2english", "offenseval2020task3english"]:
             return classification_report(preds, labels, target_names)
         else:
             raise KeyError(task_name)
