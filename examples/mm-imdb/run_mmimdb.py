@@ -15,7 +15,6 @@
 # limitations under the License.
 """ Finetuning the library models for multimodal multiclass prediction on MM-IMDB dataset."""
 
-
 import argparse
 import glob
 import json
@@ -31,7 +30,12 @@ from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
 
-from transformers import (
+import sys
+
+o_path = os.getcwd()
+sys.path.append(o_path)
+
+from src.transformers import (
     WEIGHTS_NAME,
     AdamW,
     AlbertConfig,
@@ -58,12 +62,10 @@ from transformers import (
 )
 from utils_mmimdb import ImageEncoder, JsonlDataset, collate_fn, get_image_transforms, get_mmimdb_labels
 
-
 try:
     from torch.utils.tensorboard import SummaryWriter
 except ImportError:
     from tensorboardX import SummaryWriter
-
 
 logger = logging.getLogger(__name__)
 
@@ -208,7 +210,7 @@ def train(args, train_dataset, model, tokenizer, criterion):
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     logs = {}
                     if (
-                        args.local_rank == -1 and args.evaluate_during_training
+                            args.local_rank == -1 and args.evaluate_during_training
                     ):  # Only evaluate when single GPU otherwise metrics may not average well
                         results = evaluate(args, model, tokenizer, criterion)
                         for key, value in results.items():
@@ -394,7 +396,7 @@ def main():
         default=128,
         type=int,
         help="The maximum total input sequence length after tokenization. Sequences longer "
-        "than this will be truncated, sequences shorter will be padded.",
+             "than this will be truncated, sequences shorter will be padded.",
     )
     parser.add_argument(
         "--num_image_embeds", default=1, type=int, help="Number of Image Embeddings from the Image Encoder"
@@ -461,7 +463,7 @@ def main():
         type=str,
         default="O1",
         help="For fp16: Apex AMP optimization level selected in ['O0', 'O1', 'O2', and 'O3']."
-        "See details at https://nvidia.github.io/apex/amp.html",
+             "See details at https://nvidia.github.io/apex/amp.html",
     )
     parser.add_argument("--local_rank", type=int, default=-1, help="For distributed training: local_rank")
     parser.add_argument("--server_ip", type=str, default="", help="For distant debugging.")
@@ -469,10 +471,10 @@ def main():
     args = parser.parse_args()
 
     if (
-        os.path.exists(args.output_dir)
-        and os.listdir(args.output_dir)
-        and args.do_train
-        and not args.overwrite_output_dir
+            os.path.exists(args.output_dir)
+            and os.listdir(args.output_dir)
+            and args.do_train
+            and not args.overwrite_output_dir
     ):
         raise ValueError(
             "Output directory ({}) already exists and is not empty. Use --overwrite_output_dir to overcome.".format(
@@ -556,8 +558,9 @@ def main():
         label_frequences = train_dataset.get_label_frequencies()
         label_frequences = [label_frequences[l] for l in labels]
         label_weights = (
-            torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(train_dataset)
-        ) ** -1
+                                torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
+                            train_dataset)
+                        ) ** -1
         criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
         global_step, tr_loss = train(args, train_dataset, model, tokenizer, criterion)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)

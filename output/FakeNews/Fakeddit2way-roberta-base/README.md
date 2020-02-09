@@ -1,4 +1,4 @@
-## Fakeddit
+## Fakeddit-2way
 
 ### classification
 2分类：
@@ -54,3 +54,8 @@ stage_6: 平衡10W， 1epoch
 
     dev：f1-macro = 0.8300
     test: f1-macro = 0.8311
+
+stage_7: 平衡49W， 4epoch
+
+    dev：f1-macro = 0.8708
+    test: f1-macro = 0.8740

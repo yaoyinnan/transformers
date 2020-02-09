@@ -6,7 +6,7 @@ export TASK_NAME=Fakeddit2way
 export DATA_DIR=data/${TASK}/Fakeddit/2way
 export OUTPUT_NAME=output
 export MODEL=bert
-export MODEL_NAME=bert-base
+export MODEL_NAME=bert-base-cased
 
 export TRAIN_BATCH_SIZE=8
 export EVAL_BATCH_SIZE=256

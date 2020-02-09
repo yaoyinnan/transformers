@@ -1,4 +1,4 @@
-## Fakeddit
+## Fakeddit-2way
 
 ### classification
 2分类：
