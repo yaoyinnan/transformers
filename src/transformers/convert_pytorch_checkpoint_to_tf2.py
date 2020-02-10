@@ -19,7 +19,7 @@ import argparse
 import logging
 import os
 
-from . import (
+from transformers import (
     ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
     BERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
     CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
@@ -277,7 +277,7 @@ MODEL_CLASSES = {
         DISTILBERT_PRETRAINED_MODEL_ARCHIVE_MAP,
         DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP,
     ),
-    "distilbert-base-uncased-distilled-squad": (
+    "distilbert-base-distilled-squad": (
         DistilBertConfig,
         TFDistilBertForQuestionAnswering,
         DistilBertForQuestionAnswering,

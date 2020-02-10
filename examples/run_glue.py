@@ -27,8 +27,6 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, TensorDataset
 from torch.utils.data.distributed import DistributedSampler
-
-
 from tqdm import tqdm, trange
 
 from transformers import (
@@ -312,7 +310,7 @@ def evaluate(args, model, tokenizer, prefix=""):
         eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size)
 
         # multi-gpu eval
-        if args.n_gpu > 1:
+        if args.n_gpu > 1 and not isinstance(model, torch.nn.DataParallel):
             model = torch.nn.DataParallel(model)
 
         # Eval!

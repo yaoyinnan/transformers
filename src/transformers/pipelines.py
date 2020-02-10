@@ -326,7 +326,7 @@ class Pipeline(_ScikitCompat):
         self,
         model,
         tokenizer: PreTrainedTokenizer = None,
-        modelcard: ModelCard = None,
+        modelcard: Optional[ModelCard] = None,
         framework: Optional[str] = None,
         args_parser: ArgumentHandler = None,
         device: int = -1,
@@ -358,7 +358,8 @@ class Pipeline(_ScikitCompat):
 
         self.model.save_pretrained(save_directory)
         self.tokenizer.save_pretrained(save_directory)
-        self.modelcard.save_pretrained(save_directory)
+        if self.modelcard is not None:
+            self.modelcard.save_pretrained(save_directory)
 
     def transform(self, X):
         """
@@ -476,7 +477,7 @@ class FeatureExtractionPipeline(Pipeline):
         self,
         model,
         tokenizer: PreTrainedTokenizer = None,
-        modelcard: ModelCard = None,
+        modelcard: Optional[ModelCard] = None,
         framework: Optional[str] = None,
         args_parser: ArgumentHandler = None,
         device: int = -1,
@@ -515,7 +516,7 @@ class FillMaskPipeline(Pipeline):
         self,
         model,
         tokenizer: PreTrainedTokenizer = None,
-        modelcard: ModelCard = None,
+        modelcard: Optional[ModelCard] = None,
         framework: Optional[str] = None,
         args_parser: ArgumentHandler = None,
         device: int = -1,
@@ -582,7 +583,7 @@ class NerPipeline(Pipeline):
         self,
         model,
         tokenizer: PreTrainedTokenizer = None,
-        modelcard: ModelCard = None,
+        modelcard: Optional[ModelCard] = None,
         framework: Optional[str] = None,
         args_parser: ArgumentHandler = None,
         device: int = -1,
@@ -721,7 +722,7 @@ class QuestionAnsweringPipeline(Pipeline):
         self,
         model,
         tokenizer: Optional[PreTrainedTokenizer],
-        modelcard: Optional[ModelCard],
+        modelcard: Optional[ModelCard] = None,
         framework: Optional[str] = None,
         device: int = -1,
         **kwargs
@@ -940,9 +941,9 @@ SUPPORTED_TASKS = {
         "tf": TFAutoModel if is_tf_available() else None,
         "pt": AutoModel if is_torch_available() else None,
         "default": {
-            "model": {"pt": "distilbert-base-uncased", "tf": "distilbert-base-uncased"},
+            "model": {"pt": "distilbert-base-cased", "tf": "distilbert-base-cased"},
             "config": None,
-            "tokenizer": "distilbert-base-uncased",
+            "tokenizer": "distilbert-base-cased",
         },
     },
     "sentiment-analysis": {
@@ -976,12 +977,9 @@ SUPPORTED_TASKS = {
         "tf": TFAutoModelForQuestionAnswering if is_tf_available() else None,
         "pt": AutoModelForQuestionAnswering if is_torch_available() else None,
         "default": {
-            "model": {
-                "pt": "distilbert-base-uncased-distilled-squad",
-                "tf": "distilbert-base-uncased-distilled-squad",
-            },
+            "model": {"pt": "distilbert-base-cased-distilled-squad", "tf": "distilbert-base-cased-distilled-squad"},
             "config": None,
-            "tokenizer": "distilbert-base-uncased",
+            "tokenizer": "distilbert-base-cased",
         },
     },
     "fill-mask": {
@@ -1014,7 +1012,7 @@ def pipeline(
 
     Examples:
         pipeline('sentiment-analysis')
-        pipeline('question-answering', model='distilbert-base-uncased-distilled-squad', tokenizer='bert-base-cased')
+        pipeline('question-answering', model='distilbert-base-cased-distilled-squad', tokenizer='bert-base-cased')
         pipeline('ner', model=AutoModel.from_pretrained(...), tokenizer=AutoTokenizer.from_pretrained(...)
         pipeline('ner', model='dbmdz/bert-large-cased-finetuned-conll03-english', tokenizer='bert-base-cased')
         pipeline('ner', model='https://...pytorch-model.bin', config='https://...config.json', tokenizer='bert-base-cased')

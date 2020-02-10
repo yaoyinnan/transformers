@@ -21,7 +21,7 @@ import os
 
 import torch
 
-from . import (
+from transformers import (
     CONFIG_NAME,
     WEIGHTS_NAME,
     XLNetConfig,

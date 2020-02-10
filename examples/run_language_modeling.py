@@ -118,7 +118,7 @@ class TextDataset(Dataset):
         return len(self.examples)
 
     def __getitem__(self, item):
-        return torch.tensor(self.examples[item])
+        return torch.tensor(self.examples[item], dtype=torch.long)
 
 
 class LineByLineTextDataset(Dataset):
@@ -138,7 +138,7 @@ class LineByLineTextDataset(Dataset):
         return len(self.examples)
 
     def __getitem__(self, i):
-        return torch.tensor(self.examples[i])
+        return torch.tensor(self.examples[i], dtype=torch.long)
 
 
 def load_and_cache_examples(args, tokenizer, evaluate=False):

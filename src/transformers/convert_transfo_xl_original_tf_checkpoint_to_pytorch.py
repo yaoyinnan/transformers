@@ -23,15 +23,15 @@ import sys
 
 import torch
 
-from . import tokenization_transfo_xl as data_utils
-from . import (
+import transformers.tokenization_transfo_xl as data_utils
+from transformers import (
     CONFIG_NAME,
     WEIGHTS_NAME,
     TransfoXLConfig,
     TransfoXLLMHeadModel,
     load_tf_weights_in_transfo_xl,
 )
-from .tokenization_transfo_xl import CORPUS_NAME, VOCAB_FILES_NAMES
+from transformers.tokenization_transfo_xl import CORPUS_NAME, VOCAB_FILES_NAMES
 
 
 logging.basicConfig(level=logging.INFO)

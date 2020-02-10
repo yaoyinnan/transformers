@@ -22,8 +22,8 @@ import logging
 import numpy
 import torch
 
-from . import CONFIG_NAME, WEIGHTS_NAME
-from .tokenization_xlm import VOCAB_FILES_NAMES
+from transformers import CONFIG_NAME, WEIGHTS_NAME
+from transformers.tokenization_xlm import VOCAB_FILES_NAMES
 
 
 logging.basicConfig(level=logging.INFO)
