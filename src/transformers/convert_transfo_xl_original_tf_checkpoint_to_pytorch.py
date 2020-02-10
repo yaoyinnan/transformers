@@ -31,7 +31,7 @@ from transformers import (
     TransfoXLLMHeadModel,
     load_tf_weights_in_transfo_xl,
 )
-from transformers.tokenization_transfo_xl import CORPUS_NAME, VOCAB_FILES_NAMES
+from .tokenization_transfo_xl import CORPUS_NAME, VOCAB_FILES_NAMES
 
 
 logging.basicConfig(level=logging.INFO)

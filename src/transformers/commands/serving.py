@@ -3,8 +3,8 @@ from argparse import ArgumentParser, Namespace
 from typing import Any, List, Optional
 
 from transformers import Pipeline
-from transformers.commands import BaseTransformersCLICommand
-from transformers.pipelines import SUPPORTED_TASKS, pipeline
+from .commands import BaseTransformersCLICommand
+from .pipelines import SUPPORTED_TASKS, pipeline
 
 
 try:

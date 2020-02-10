@@ -4,7 +4,7 @@ from logging import getLogger
 
 from transformers import SingleSentenceClassificationProcessor as Processor
 from transformers import TextClassificationPipeline, is_tf_available, is_torch_available
-from transformers.commands import BaseTransformersCLICommand
+from .commands import BaseTransformersCLICommand
 
 
 if not is_tf_available() and not is_torch_available():

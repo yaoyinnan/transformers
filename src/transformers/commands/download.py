@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from transformers.commands import BaseTransformersCLICommand
+from .commands import BaseTransformersCLICommand
 
 
 def download_command_factory(args):
