@@ -839,9 +839,9 @@ class Fakeddit5wayProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train_186437.tsv")))
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train_125290.tsv")))
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train_186437.tsv"), '"'), "train")
+            self._read_tsv(os.path.join(data_dir, "train_125290.tsv"), '"'), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""

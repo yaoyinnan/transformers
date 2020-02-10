@@ -335,10 +335,10 @@ def evaluate(args, model, tokenizer, criterion, prefix=""):
 
 
 def load_examples(args, tokenizer, evaluate=False):
-    path = os.path.join(args.data_dir, "dev.jsonl" if evaluate else "train.jsonl")
+    data_path = os.path.join(args.data_dir, "dev.json" if evaluate else "train.json")
     transforms = get_image_transforms()
     labels = get_mmimdb_labels()
-    dataset = JsonlDataset(path, tokenizer, transforms, labels, args.max_seq_length - args.num_image_embeds - 2)
+    dataset = JsonlDataset(data_path, tokenizer, transforms, labels, args.max_seq_length - args.num_image_embeds - 2)
     return dataset
 
 
