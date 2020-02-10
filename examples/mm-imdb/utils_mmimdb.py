@@ -57,6 +57,7 @@ class JsonlDataset(Dataset):
                         data_item["plot outline"] if "plot outline" in data_item else data_item["plot"][0]),
                         "img": item + ".jpeg", "label": data_item["genres"]}
                     self.data.append(processed_item)
+        self.data = self.data[0:250]
         self.tokenizer = tokenizer
         self.labels = labels
         self.n_classes = len(labels)
@@ -138,6 +139,7 @@ def get_mmimdb_labels():
         "Biography",
         "Film-Noir",
         "News",
+        "Adult",
     ]
 
 
