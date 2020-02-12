@@ -193,17 +193,17 @@ def train(args, train_dataset, model, tokenizer):
     global_step = 0
     epochs_trained = 0
     steps_trained_in_current_epoch = 0
-    # Check if continuing training from a checkpoint
-    if os.path.exists(args.model_name_or_path):
-        # set global_step to gobal_step of last saved checkpoint from model path
-        global_step = int(args.model_name_or_path.split("-")[-1].split("/")[0])
-        epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
-        steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
-
-        logger.info("  Continuing training from checkpoint, will skip to saved global_step")
-        logger.info("  Continuing training from epoch %d", epochs_trained)
-        logger.info("  Continuing training from global step %d", global_step)
-        logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
+    # # Check if continuing training from a checkpoint
+    # if os.path.exists(args.model_name_or_path):
+    #     # set global_step to gobal_step of last saved checkpoint from model path
+    #     global_step = int(args.model_name_or_path.split("-")[-1].split("/")[0])
+    #     epochs_trained = global_step // (len(train_dataloader) // args.gradient_accumulation_steps)
+    #     steps_trained_in_current_epoch = global_step % (len(train_dataloader) // args.gradient_accumulation_steps)
+    #
+    #     logger.info("  Continuing training from checkpoint, will skip to saved global_step")
+    #     logger.info("  Continuing training from epoch %d", epochs_trained)
+    #     logger.info("  Continuing training from global step %d", global_step)
+    #     logger.info("  Will skip the first %d steps in the first epoch", steps_trained_in_current_epoch)
 
     tr_loss, logging_loss = 0.0, 0.0
     model.zero_grad()
@@ -555,7 +555,7 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
     cached_features_file = os.path.join(
         args.data_dir,
         "cached_{}_{}_{}_{}".format(
-            "dev" if evaluate else "train",
+            evaluate,
             list(filter(None, args.model_name_or_path.split("/"))).pop(),
             str(args.max_seq_length),
             str(task),

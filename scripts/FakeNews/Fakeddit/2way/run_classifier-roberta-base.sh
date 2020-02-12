@@ -7,18 +7,19 @@ export DATA_DIR=data/${TASK}/Fakeddit/2way
 export OUTPUT_NAME=output
 export MODEL=roberta
 export MODEL_NAME=roberta-base
+export MODEL_PATH=./models/${MODEL}/${MODEL_NAME}
 
-export TRAIN_BATCH_SIZE=4
+export TRAIN_BATCH_SIZE=16
 export EVAL_BATCH_SIZE=256
 export DEFAULT_BATCH_SIZE=8
-export DEFAULT_SAVE_STEPS=16500
+export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
 export DEFAULT_MAX_SEQ_LENGTH=128
 export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
 
 export STAGE_NUM=1
-export NEXT_STAGE_NUM=8
+export NEXT_STAGE_NUM=1
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \
@@ -39,6 +40,6 @@ python ./examples/run_classifier.py \
     --overwrite_cache \
     --eval_all_checkpoints \
     --do_test \
-    --do_eval \#
-#    --do_train \
+    --do_eval \
+    --do_train \
 #    --do_predict \
