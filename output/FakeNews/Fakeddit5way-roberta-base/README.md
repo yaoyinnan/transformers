@@ -36,3 +36,8 @@ stage_2: 25058 + 25058 + 25058 + 25058 + 25058 = 125290(balance), 1epoch
     dev：f1-macro = 0.7087
     test: f1-macro = 0.7156
 
+stage_3: 全部数据, 1epoch
+
+    dev：f1-macro = 0.7988
+    test: f1-macro = 0.8021
+

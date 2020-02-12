@@ -39,6 +39,6 @@ python ./examples/run_classifier.py \
     --overwrite_cache \
     --eval_all_checkpoints \
     --do_test \
-    --do_eval \
-    --do_train \
+    --do_eval \#
+#    --do_train \
 #    --do_predict \
