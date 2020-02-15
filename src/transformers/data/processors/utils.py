@@ -19,13 +19,12 @@ import sys
 import copy
 import json
 import logging
-
+import emoji
 import re
+import nltk
 from nltk.stem import SnowballStemmer
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
-import nltk
-import emoji
 
 logger = logging.getLogger(__name__)
 

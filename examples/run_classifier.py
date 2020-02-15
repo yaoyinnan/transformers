@@ -188,7 +188,7 @@ def train(args, train_dataset, model, tokenizer):
 
     # 计算最大steps
     import math
-    args.max_steps = math.ceil((len(train_dataset) * args.num_train_epochs / args.per_gpu_train_batch_size))
+    args.all_steps = math.ceil((len(train_dataset) * args.num_train_epochs / args.per_gpu_train_batch_size))
 
     global_step = 0
     epochs_trained = 0
@@ -252,7 +252,6 @@ def train(args, train_dataset, model, tokenizer):
                 scheduler.step()  # Update learning rate schedule
                 model.zero_grad()
                 global_step += 1
-
                 if args.local_rank in [-1, 0] and args.logging_steps > 0 and global_step % args.logging_steps == 0:
                     logs = {}
                     if (
@@ -273,7 +272,8 @@ def train(args, train_dataset, model, tokenizer):
                         tb_writer.add_scalar(key, value, global_step)
                     print(json.dumps({**logs, **{"step": global_step}}))
 
-                if args.local_rank in [-1, 0] and args.save_steps > 0 and (global_step % args.save_steps == 0 or global_step == args.max_steps):
+                if args.local_rank in [-1, 0] and args.save_steps > 0 and (
+                        global_step % args.save_steps == 0 or global_step == args.all_steps):
                     # Save model checkpoint
                     output_dir = os.path.join(args.output_dir, "checkpoint-{}".format(global_step))
                     if not os.path.exists(output_dir):
@@ -311,7 +311,7 @@ def evaluate(args, model, tokenizer, prefix=""):
 
     results = {}
     for eval_task, eval_output_dir in zip(eval_task_names, eval_outputs_dirs):
-        eval_output_dir += prefix
+        eval_output_dir = os.path.join(eval_output_dir, prefix)
         eval_dataset, guids = load_and_cache_examples(args, eval_task, tokenizer, evaluate="dev")
         if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(eval_output_dir)
@@ -391,13 +391,13 @@ def evaluate(args, model, tokenizer, prefix=""):
 
 
 def test(args, model, tokenizer, prefix=""):
-    # Loop to handle MNLI double evaluation (matched, mis-matched)
+    # Loop to handle MNLI double testing (matched, mis-matched)
     test_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
     test_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" \
         else (args.output_dir,)
     results = {}
     for test_task, test_output_dir in zip(test_task_names, test_outputs_dirs):
-        test_output_dir += prefix
+        test_output_dir = os.path.join(test_output_dir, prefix)
         test_dataset, guids = load_and_cache_examples(args, test_task, tokenizer, evaluate="test")
         if not os.path.exists(test_output_dir) and args.local_rank in [-1, 0]:
             os.makedirs(test_output_dir)
@@ -810,6 +810,7 @@ def main():
         device = torch.device("cuda", args.local_rank)
         torch.distributed.init_process_group(backend="nccl")
         args.n_gpu = 1
+
     args.device = device
 
     # Setup logging
@@ -830,7 +831,7 @@ def main():
     # Set seed
     set_seed(args)
 
-    # Prepare GLUE task
+    # Prepare My task
     args.task_name = args.task_name.lower()
     if args.task_name not in processors:
         raise ValueError("Task not found: %s" % (args.task_name))
@@ -911,37 +912,36 @@ def main():
         checkpoints = []
         if args.eval_all_checkpoints:
             checkpoints = list(
-                os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + '/**/' + WEIGHTS_NAME, recursive=True)))
+                os.path.dirname(c) for c in sorted(glob.glob(args.output_dir + "/**/" + WEIGHTS_NAME, recursive=True)))
             logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
-
         checkpoint_score_max = 0
         checkpoint_score_max_checkpoint = ""
         for checkpoint in checkpoints:
             global_step = checkpoint.split('-')[-1] if len(checkpoints) > 1 else ""
-            prefix = ("/" + str(checkpoint.split('\\')[-1])) if checkpoint.find('checkpoint') != -1 else ""
-            model_path = args.output_dir + prefix
-            model = model_class.from_pretrained(checkpoint)
+            prefix = ("checkpoint-" + str(checkpoint.split('-')[-1])) if checkpoint.find('checkpoint') != -1 else ""
+            model_path = os.path.join(args.output_dir, prefix)
+            model = model_class.from_pretrained(model_path)
             model.to(args.device)
             tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
             result = evaluate(args, model, tokenizer, prefix=prefix)
             result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
             results.update(result)
             checkpoint_score = result[result['score_name_' + global_step] + "_" + global_step]
-            if checkpoint_score > checkpoint_score_max:
+            if checkpoint_score >= checkpoint_score_max:
                 checkpoint_score_max = checkpoint_score
                 checkpoint_score_max_checkpoint = prefix
 
-        best_checkpoint_path = args.output_dir + "/checkpoint-best"
+        best_checkpoint_path = os.path.join(args.output_dir, "checkpoint-best")
         shutil.copytree(args.output_dir + checkpoint_score_max_checkpoint, best_checkpoint_path)
 
     # testing
     results = {}
     if args.do_test and args.local_rank in [-1, 0]:
-        model_path = args.output_dir + "/checkpoint-best"
+        model_path = os.path.join(args.output_dir, "checkpoint-best")
         tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
-        prefix = "/checkpoint-best/test"
-        checkpoint = args.output_dir + "/checkpoint-best"
+        prefix = os.path.join("checkpoint-best", "test")
+        checkpoint = os.path.join(args.output_dir, "checkpoint-best")
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
         model = model_class.from_pretrained(checkpoint)
         model.to(args.device)

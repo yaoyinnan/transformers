@@ -711,9 +711,9 @@ class Fakeddit2wayProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train_10.tsv")))
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
+            self._read_tsv(os.path.join(data_dir, "train_10.tsv"), '"'), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
@@ -891,6 +891,90 @@ class Fakeddit5wayProcessor(DataProcessor):
         return examples
 
 
+class FakedditFineGrainedProcessor(DataProcessor):
+    """Processor for the Fakeddit5way data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "validate.tsv"), '"'), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "test")
+
+    def get_predict_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "predict.tsv"), '"'), "predict")
+
+    def get_labels(self):
+        """See base class."""
+        return ['nottheonion',
+                'fakealbumcovers',
+                'confusing_perspective',
+                'pareidolia',
+                'upliftingnews',
+                'pic',
+                'mildlyinteresting',
+                'fakehistoryporn',
+                'theonion',
+                'photoshopbattles',
+                'misleadingthumbnails',
+                'usnews',
+                'propagandaposters',
+                'subredditsimulator',
+                'usanews',
+                'neutralnews',
+                'satire',
+                'savedyouaclick',
+                'subsimulatorgpt2',
+                'fakefacts',
+                'waterfordwhispersnews']
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            guid = line[0]
+            if set_type == "train":
+                label = line[11]
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "dev":
+                label = line[11]
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "test":
+                label = line[12]
+                text_a = line[13]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "predict":
+                text_a = line[12]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
 class wuhan2019ncovProcessor(DataProcessor):
     """Processor for the FEVER data set (My version)."""
 
@@ -975,6 +1059,7 @@ my_tasks_num_labels = {
     "fakeddit2way": 2,
     "fakeddit3way": 3,
     "fakeddit5way": 5,
+    "fakedditfinegrained": 21,
     "wuhan2019ncov": 2,
     "offenseval2019task1": 2,
     "offenseval2019task2": 2,
@@ -991,6 +1076,7 @@ my_processors = {
     "fakeddit2way": Fakeddit2wayProcessor,
     "fakeddit3way": Fakeddit3wayProcessor,
     "fakeddit5way": Fakeddit5wayProcessor,
+    "fakedditfinegrained": FakedditFineGrainedProcessor,
     "wuhan2019ncov": wuhan2019ncovProcessor,
     "offenseval2019task1": OffensEval2019Task1Processor,
     "offenseval2019task2": OffensEval2019Task2Processor,
@@ -1007,6 +1093,7 @@ my_output_modes = {
     "fakeddit2way": "classification",
     "fakeddit3way": "classification",
     "fakeddit5way": "classification",
+    "fakedditfinegrained": "classification",
     "wuhan2019ncov": "classification",
     "offenseval2019task1": "classification",
     "offenseval2019task2": "classification",

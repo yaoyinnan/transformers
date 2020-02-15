@@ -133,7 +133,7 @@ if _has_sklearn:
             return classification_report(preds, labels, target_names)
         elif task_name == "fever":
             return classification_report(preds, labels, target_names)
-        elif task_name in ["fakeddit2way", "fakeddit3way", "fakeddit5way"]:
+        elif task_name in ["fakeddit2way", "fakeddit3way", "fakeddit5way", "fakedditfinegrained"]:
             return classification_report(preds, labels, target_names)
         elif task_name == "wuhan2019ncov":
             return classification_report(preds, labels, target_names)

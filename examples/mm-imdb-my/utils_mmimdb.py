@@ -16,6 +16,7 @@
 
 import json
 import os
+import random
 from collections import Counter
 
 import torch
@@ -25,14 +26,15 @@ import torchvision.transforms as transforms
 from PIL import Image
 from torch.utils.data import Dataset
 
-
 POOLING_BREAKDOWN = {1: (1, 1), 2: (2, 1), 3: (3, 1), 4: (2, 2), 5: (5, 1), 6: (3, 2), 7: (7, 1), 8: (4, 2), 9: (3, 3)}
 
 
 class ImageEncoder(nn.Module):
     def __init__(self, args):
         super().__init__()
-        model = torchvision.models.resnet152(pretrained=True)
+        # model = torchvision.models.resnet152(pretrained=True)
+        model = torchvision.models.resnet152(pretrained=False)
+        model.load_state_dict(torch.load(args.image_model))
         modules = list(model.children())[:-2]
         self.model = nn.Sequential(*modules)
         self.pool = nn.AdaptiveAvgPool2d(POOLING_BREAKDOWN[args.num_image_embeds])
@@ -47,8 +49,19 @@ class ImageEncoder(nn.Module):
 
 class JsonlDataset(Dataset):
     def __init__(self, data_path, tokenizer, transforms, labels, max_seq_length):
-        self.data = [json.loads(l) for l in open(data_path)]
+        self.data = []
         self.data_dir = os.path.dirname(data_path)
+        with open(data_path, 'r') as f:
+            data_list = json.loads(f.read())
+            for item in data_list:
+                with open(os.path.join(self.data_dir, "dataset", item + ".json"), 'r') as item_f:
+                    data_item = json.loads(item_f.read())
+                    processed_item = {"text": ' '.join(
+                        data_item["plot outline"] if "plot outline" in data_item else data_item["plot"][0]),
+                        "img": (item if bool(random.getrandbits(1)) else "default") + ".jpeg",
+                        "label": data_item["genres"]}
+                    self.data.append(processed_item)
+        # self.data = self.data[0:250]
         self.tokenizer = tokenizer
         self.labels = labels
         self.n_classes = len(labels)
@@ -67,7 +80,7 @@ class JsonlDataset(Dataset):
         label = torch.zeros(self.n_classes)
         label[[self.labels.index(tgt) for tgt in self.data[index]["label"]]] = 1
 
-        image = Image.open(os.path.join(self.data_dir, self.data[index]["img"])).convert("RGB")
+        image = Image.open(os.path.join(self.data_dir, "dataset", self.data[index]["img"])).convert("RGB")
         image = self.transforms(image)
 
         return {
@@ -105,31 +118,9 @@ def collate_fn(batch):
 
 
 def get_mmimdb_labels():
-    return [
-        "Crime",
-        "Drama",
-        "Thriller",
-        "Action",
-        "Comedy",
-        "Romance",
-        "Documentary",
-        "Short",
-        "Mystery",
-        "History",
-        "Family",
-        "Adventure",
-        "Fantasy",
-        "Sci-Fi",
-        "Western",
-        "Horror",
-        "Sport",
-        "War",
-        "Music",
-        "Musical",
-        "Animation",
-        "Biography",
-        "Film-Noir",
-    ]
+    return ['Crime', 'Drama', 'Thriller', 'Action', 'Comedy', 'Romance', 'Documentary', 'Short', 'Mystery', 'History',
+            'Family', 'Adventure', 'Fantasy', 'Sci-Fi', 'Western', 'Horror', 'Sport', 'War', 'Music', 'Musical',
+            'Animation', 'Biography', 'Film-Noir', 'News', 'Talk-Show', 'Reality-TV', 'Adult']
 
 
 def get_image_transforms():
@@ -138,6 +129,6 @@ def get_image_transforms():
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.46777044, 0.44531429, 0.40661017], std=[0.12221994, 0.12145835, 0.14380469],),
+            transforms.Normalize(mean=[0.46777044, 0.44531429, 0.40661017], std=[0.12221994, 0.12145835, 0.14380469], ),
         ]
     )

@@ -59,3 +59,13 @@ stage_7: 平衡49W， 4epoch
 
     dev：f1-macro = 0.8708
     test: f1-macro = 0.8740
+    
+stage_8: 全部数据， 4epoch
+
+    dev：f1-macro = 0.8520
+    test: f1-macro = 0.8536
+    
+stage_9: 全部数据， 10epoch
+
+    dev：f1-macro = 0.8766
+    test: f1-macro = 0.8770
