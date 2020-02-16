@@ -8,18 +8,19 @@ export OUTPUT_NAME=output
 export MODEL=bert
 export MODEL_NAME=bert-base-cased
 
-export TRAIN_BATCH_SIZE=4
-export EVAL_BATCH_SIZE=256
+export TRAIN_BATCH_SIZE=32
+export EVAL_BATCH_SIZE=32
 export DEFAULT_BATCH_SIZE=8
-export DEFAULT_SAVE_STEPS=
+export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
 export DEFAULT_MAX_SEQ_LENGTH=128
 export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
 export STAGE_NUM=1
-export NEXT_STAGE_NUM=1
+export NEXT_STAGE_NUM=2
 
 python ./examples/multimodal/run_multimodal.py \
+    --no_cuda \
     --model_type ${MODEL} \
     --model_name_or_path ${MODEL_NAME} \
     --image_model ./models/resnet/resnet152.pth \
