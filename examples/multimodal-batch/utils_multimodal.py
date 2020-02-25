@@ -287,8 +287,6 @@ class FakedditMM2wayProcessor(DataProcessor):
         for (i, line) in enumerate(lines):
             if i == 0:
                 continue
-            if i > 4800:
-                break
             guid = line[0]
             if set_type == "train":
                 label = line[13]
@@ -308,7 +306,7 @@ class FakedditMM2wayProcessor(DataProcessor):
                 text = self.preprocess(text)
                 img = (line[3] if self.str_to_bool(line[6]) else "default") + ".jpg"
                 examples.append({"guid": guid, "text": text, "label": label, "img": img})
-        return examples, self.get_tensor(examples)
+        return examples
 
 
 class FakedditMM3wayProcessor(DataProcessor):

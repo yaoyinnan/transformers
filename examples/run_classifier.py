@@ -476,37 +476,37 @@ def test(args, model, tokenizer, prefix=""):
     return results
 
 
-def predict(args, model, tokenizer, prefix=""):
+def pred(args, model, tokenizer, prefix=""):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
-    predict_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
-    predict_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (
+    pred_task_names = ("mnli", "mnli-mm") if args.task_name == "mnli" else (args.task_name,)
+    pred_outputs_dirs = (args.output_dir, args.output_dir + '-MM') if args.task_name == "mnli" else (
         args.output_dir,)
 
     results = {}
-    for predict_task, predict_output_dir in zip(predict_task_names, predict_outputs_dirs):
-        predict_output_dir += prefix
-        predict_dataset, guids = load_and_cache_examples(args, predict_task, tokenizer, evaluate="predict")
+    for pred_task, pred_output_dir in zip(pred_task_names, pred_outputs_dirs):
+        pred_output_dir = os.path.join(pred_output_dir, prefix)
+        pred_dataset, guids = load_and_cache_examples(args, pred_task, tokenizer, evaluate="pred")
 
-        if not os.path.exists(predict_output_dir) and args.local_rank in [-1, 0]:
-            os.makedirs(predict_output_dir)
+        if not os.path.exists(pred_output_dir) and args.local_rank in [-1, 0]:
+            os.makedirs(pred_output_dir)
 
-        args.predict_batch_size = args.per_gpu_pred_batch_size * max(1, args.n_gpu)
+        args.pred_batch_size = args.per_gpu_pred_batch_size * max(1, args.n_gpu)
         # Note that DistributedSampler samples randomly
-        predict_sampler = SequentialSampler(predict_dataset) if args.local_rank == -1 else DistributedSampler(
-            predict_dataset)
-        predict_dataloader = DataLoader(predict_dataset, sampler=predict_sampler, batch_size=args.predict_batch_size)
+        pred_sampler = SequentialSampler(pred_dataset) if args.local_rank == -1 else DistributedSampler(
+            pred_dataset)
+        pred_dataloader = DataLoader(pred_dataset, sampler=pred_sampler, batch_size=args.pred_batch_size)
 
         # Predict!
         logger.info("***** Running predicting {} *****".format(prefix))
-        logger.info("  Num examples = %d", len(predict_dataset))
-        logger.info("  Batch size = %d", args.predict_batch_size)
-        nb_predict_steps = 0
+        logger.info("  Num examples = %d", len(pred_dataset))
+        logger.info("  Batch size = %d", args.pred_batch_size)
+        nb_pred_steps = 0
         preds = None
-        for batch in tqdm(predict_dataloader, desc="Predicting"):
+        for batch in tqdm(pred_dataloader, desc="Predicting"):
             model.eval()
             batch = tuple(t.to(args.device) for t in batch)
             with torch.no_grad():
-                inputs = {"input_ids": batch[0], "attention_mask": batch[1], "labels": batch[3]}
+                inputs = {"input_ids": batch[0], "attention_mask": batch[1]}
                 if args.model_type != "distilbert":
                     inputs["token_type_ids"] = (
                         batch[2] if args.model_type in ["bert", "xlnet", "albert"] else None
@@ -515,7 +515,7 @@ def predict(args, model, tokenizer, prefix=""):
                 outputs = model(**inputs)
                 logits = outputs[0]
 
-            nb_predict_steps += 1
+            nb_pred_steps += 1
             if preds is None:
                 preds = logits.detach().cpu().numpy()
             else:
@@ -530,14 +530,14 @@ def predict(args, model, tokenizer, prefix=""):
         preds = processor.label_index_to_label(preds)
 
         if len(guids) == len(preds):
-            output_pred_file = os.path.join(predict_output_dir, "pred_results.txt")
-            with open(output_pred_file, "w", encoding='utf-8', newline='') as predict_file:
+            output_result_file = os.path.join(pred_output_dir, "pred_results.csv")
+            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
                 predict_file_writer.writerow(headers)
                 for index in range(len(guids)):
                     predict_file_writer.writerow([guids[index], preds[index]])
-                logger.info("Save " + output_pred_file + " down.")
+                logger.info("Save " + pred_output_dir + " down.")
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
@@ -580,35 +580,46 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
             examples = processor.get_dev_examples(args.data_dir)
         elif evaluate == "test":
             examples = processor.get_test_examples(args.data_dir)
-        elif evaluate == "predict":
-            examples = processor.get_predict_examples(args.data_dir)
+        elif evaluate == "pred":
+            examples = processor.get_pred_examples(args.data_dir)
         if evaluate == "train":
-            features = convert_examples_to_features(examples,
-                                                    evaluate,
-                                                    tokenizer,
-                                                    label_list=label_list,
-                                                    max_length=args.max_seq_length,
-                                                    output_mode=output_mode,
-                                                    pad_on_left=bool(args.model_type in ['xlnet']),
-                                                    # pad on the left for xlnet
-                                                    pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
-                                                    pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
-                                                    )
-        elif evaluate in ["train", "dev", "test"]:
-            features, guids = convert_examples_to_features(examples,
-                                                           evaluate,
-                                                           tokenizer,
-                                                           label_list=label_list,
-                                                           max_length=args.max_seq_length,
-                                                           output_mode=output_mode,
-                                                           pad_on_left=bool(args.model_type in ['xlnet']),
-                                                           # pad on the left for xlnet
-                                                           pad_token=
-                                                           tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[
-                                                               0],
-                                                           pad_token_segment_id=4 if args.model_type in [
-                                                               'xlnet'] else 0,
-                                                           )
+            features = convert_examples_to_features(
+                examples,
+                evaluate,
+                tokenizer,
+                label_list=label_list,
+                max_length=args.max_seq_length,
+                output_mode=output_mode,
+                pad_on_left=bool(args.model_type in ['xlnet']),
+                # pad on the left for xlnet
+                pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
+                pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
+            )
+        elif evaluate in ["dev", "test"]:
+            features, guids = convert_examples_to_features(
+                examples,
+                evaluate,
+                tokenizer,
+                label_list=label_list,
+                max_length=args.max_seq_length,
+                output_mode=output_mode,
+                pad_on_left=bool(args.model_type in ['xlnet']),
+                # pad on the left for xlnet
+                pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
+                pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
+            )
+        elif evaluate in ["pred"]:
+            features, guids = convert_examples_to_features(
+                examples,
+                evaluate,
+                tokenizer,
+                max_length=args.max_seq_length,
+                output_mode=output_mode,
+                pad_on_left=bool(args.model_type in ['xlnet']),
+                # pad on the left for xlnet
+                pad_token=tokenizer.convert_tokens_to_ids([tokenizer.pad_token])[0],
+                pad_token_segment_id=4 if args.model_type in ['xlnet'] else 0,
+            )
         if args.local_rank in [-1, 0]:
             logger.info("Saving features into cached file %s", cached_features_file)
             torch.save(features, cached_features_file)
@@ -631,12 +642,12 @@ def load_and_cache_examples(args, task, tokenizer, evaluate="train"):
     dataset = None
     if evaluate in ["train", "dev", "test"]:
         dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids, all_labels)
-    elif evaluate == "predict":
+    elif evaluate == "pred":
         dataset = TensorDataset(all_input_ids, all_attention_mask, all_token_type_ids)
 
     if evaluate == "train":
         return dataset
-    elif evaluate in ["dev", "test", "predict"]:
+    elif evaluate in ["dev", "test", "pred"]:
         return dataset, guids
 
 
@@ -707,7 +718,7 @@ def main():
     parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
     parser.add_argument("--do_test", action='store_true',
                         help="Whether to run test on the test set.")
-    parser.add_argument("--do_predict", action='store_true',
+    parser.add_argument("--do_pred", action='store_true',
                         help="Whether to run predict on the predict set.")
     parser.add_argument(
         "--evaluate_during_training", action="store_true", help="Run evaluation during training at each logging step.",
@@ -933,7 +944,7 @@ def main():
                 checkpoint_score_max_checkpoint = prefix
 
         best_checkpoint_path = os.path.join(args.output_dir, "checkpoint-best")
-        shutil.copytree(args.output_dir + checkpoint_score_max_checkpoint, best_checkpoint_path)
+        shutil.copytree(os.path.join(args.output_dir, checkpoint_score_max_checkpoint), best_checkpoint_path)
 
     # testing
     results = {}
@@ -949,15 +960,15 @@ def main():
 
     # predicting
     results = {}
-    if args.do_predict and args.local_rank in [-1, 0]:
-        model_path = args.output_dir + "/checkpoint-best"
+    if args.do_pred and args.local_rank in [-1, 0]:
+        model_path = os.path.join(args.output_dir, "checkpoint-best")
         tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
-        prefix = "/checkpoint-best/predict"
-        checkpoint = args.output_dir + "/checkpoint-best"
+        prefix = os.path.join("checkpoint-best", "pred")
+        checkpoint = os.path.join(args.output_dir, "checkpoint-best")
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
         model = model_class.from_pretrained(checkpoint)
         model.to(args.device)
-        predict(args, model, tokenizer, prefix=prefix)
+        pred(args, model, tokenizer, prefix=prefix)
 
     return results
 

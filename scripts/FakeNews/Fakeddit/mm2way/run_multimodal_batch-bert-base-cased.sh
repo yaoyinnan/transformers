@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-set -eux
 
 export TASK=FakeNews
-export TASK_NAME=LIAR
-export DATA_DIR=data/${TASK}/${TASK_NAME}
+export TASK_NAME=Fakedditmm2way
+export DATA_DIR=data/${TASK}/Fakeddit/2way
+export IMAGE_DIR=data/${TASK}/Fakeddit/images
 export OUTPUT_NAME=output
-export PREDICT_NAME=predict
-export MODEL=roberta
-export MODEL_NAME=roberta-base
+export MODEL=bert
+export MODEL_NAME=bert-base-cased
 
-export TRAIN_BATCH_SIZE=4
-export EVAL_BATCH_SIZE=256
+export TRAIN_BATCH_SIZE=16
+export EVAL_BATCH_SIZE=16
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
@@ -20,25 +19,25 @@ export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=3
 
-python ./examples/run_classifier.py \
+python ./examples/multimodal-test/run_multimodal.py \
     --model_type ${MODEL} \
     --model_name_or_path ${MODEL_NAME} \
+    --image_model ./models/resnet/resnet152.pth \
     --task_name ${TASK_NAME} \
-    --do_lower_case \
     --data_dir ${DATA_DIR} \
-    --max_seq_length ${MAX_SEQ_LENGTH} \
+    --image_dir ${IMAGE_DIR} \
+    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
+    --max_seq_len ${DEFAULT_MAX_SEQ_LENGTH} \
     --per_gpu_train_batch_size ${TRAIN_BATCH_SIZE}   \
     --per_gpu_eval_batch_size ${EVAL_BATCH_SIZE}   \
     --per_gpu_test_batch_size ${EVAL_BATCH_SIZE}   \
-    --per_gpu_pred_batch_size ${EVAL_BATCH_SIZE}   \
-    --learning_rate 1e-5 \
-    --weight_decay 0.0001 \
-    --num_train_epochs 1.0 \
-    --output_dir ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM} \
     --save_steps ${DEFAULT_SAVE_STEPS} \
-    --overwrite_cache \
-    --eval_all_checkpoints \
-    --do_test \
-    --do_eval \
+    --num_image_embeds 3 \
+    --num_train_epochs 1 \
+    --eval_all_checkpoints  \
+    --do_test  \
+    --do_eval  \
     --do_train \
-#    --do_predict \
+#    --no_cuda \
+#    --gradient_accumulation_steps 20 \
+

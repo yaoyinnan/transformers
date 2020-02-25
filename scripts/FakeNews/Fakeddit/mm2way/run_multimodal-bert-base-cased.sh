@@ -8,16 +8,16 @@ export OUTPUT_NAME=output
 export MODEL=bert
 export MODEL_NAME=bert-base-cased
 
-export TRAIN_BATCH_SIZE=32
-export EVAL_BATCH_SIZE=32
+export TRAIN_BATCH_SIZE=48
+export EVAL_BATCH_SIZE=48
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
-export DEFAULT_MAX_SEQ_LENGTH=128
+export DEFAULT_MAX_SEQ_LENGTH=48
 export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX_SEQ_LENGTH}/2))
 
 export STAGE_NUM=1
-export NEXT_STAGE_NUM=2
+export NEXT_STAGE_NUM=3
 
 python ./examples/multimodal/run_multimodal.py \
     --no_cuda \
@@ -37,4 +37,6 @@ python ./examples/multimodal/run_multimodal.py \
     --eval_all_checkpoints  \
     --do_test  \
     --do_eval  \
-#    --do_train \
+    --do_train \
+#    --gradient_accumulation_steps 20 \
+

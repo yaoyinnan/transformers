@@ -27,7 +27,7 @@ import shutil
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import f1_score
+from sklearn import metrics
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torch.utils.data.distributed import DistributedSampler
 from tqdm import tqdm, trange
@@ -98,26 +98,24 @@ def set_seed(args):
         torch.cuda.manual_seed_all(args.seed)
 
 
-def train(args, train_dataset, model, tokenizer, criterion):
+def train(args, model, tokenizer):
     """ Train the model """
+    train_dataset, train_data_processor = load_examples(args, tokenizer, evaluate="train")
+    labels = train_data_processor.labels
+    label_frequences = get_label_frequencies(train_dataset)
+    label_frequences = [label_frequences[l] for l in labels]
+    label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) /
+                     len(train_dataset)) ** -1
+    criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
+
     if args.local_rank in [-1, 0]:
         tb_writer = SummaryWriter()
 
-    args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
-    train_sampler = RandomSampler(train_dataset) if args.local_rank == -1 else DistributedSampler(train_dataset)
-    train_dataloader = DataLoader(
-        train_dataset,
-        sampler=train_sampler,
-        batch_size=args.train_batch_size,
-        collate_fn=collate_fn,
-        num_workers=args.num_workers,
-    )
-
     if args.max_steps > 0:
         t_total = args.max_steps
-        args.num_train_epochs = args.max_steps // (len(train_dataloader) // args.gradient_accumulation_steps) + 1
+        args.num_train_epochs = args.max_steps // (len(train_dataset) // args.gradient_accumulation_steps) + 1
     else:
-        t_total = len(train_dataloader) // args.gradient_accumulation_steps * args.num_train_epochs
+        t_total = len(train_dataset) // args.gradient_accumulation_steps * args.num_train_epochs
 
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ["bias", "LayerNorm.weight"]
@@ -159,6 +157,8 @@ def train(args, train_dataset, model, tokenizer, criterion):
             model, device_ids=[args.local_rank], output_device=args.local_rank, find_unused_parameters=True
         )
 
+    args.train_batch_size = args.per_gpu_train_batch_size * max(1, args.n_gpu)
+
     # Train!
     logger.info("***** Running training *****")
     logger.info("  Num examples = %d", len(train_dataset))
@@ -198,8 +198,23 @@ def train(args, train_dataset, model, tokenizer, criterion):
     train_iterator = trange(int(args.num_train_epochs), desc="Epoch", disable=args.local_rank not in [-1, 0])
     set_seed(args)  # Added here for reproductibility
     for _ in train_iterator:
-        epoch_iterator = tqdm(train_dataloader, desc="Iteration", disable=args.local_rank not in [-1, 0])
-        for step, batch in enumerate(epoch_iterator):
+        stage_num = (len(train_dataset) // args.train_batch_size) + 1
+        epoch_iterator = trange(stage_num, desc="Iteration", disable=args.local_rank not in [-1, 0])
+        sub_train_dataset_list = [train_dataset[i:i + args.train_batch_size] for i in
+                                  range(0, len(train_dataset), args.train_batch_size)]
+        for step, __ in enumerate(epoch_iterator):
+            sub_train_dataset = sub_train_dataset_list[step]
+            sub_train_dataset = train_data_processor.get_tensor(sub_train_dataset)
+            train_sampler = RandomSampler(sub_train_dataset) if args.local_rank == -1 else DistributedSampler(
+                sub_train_dataset)
+            train_dataloader = DataLoader(
+                sub_train_dataset,
+                sampler=train_sampler,
+                batch_size=args.train_batch_size,
+                collate_fn=collate_fn,
+                num_workers=args.num_workers,
+            )
+            batch = train_dataloader.__iter__().__next__()
 
             # Skip past any already trained steps if resuming training
             if steps_trained_in_current_epoch > 0:
@@ -309,20 +324,22 @@ def train(args, train_dataset, model, tokenizer, criterion):
     return global_step, tr_loss / global_step
 
 
-def evaluate(args, model, dataset, tokenizer, criterion, prefix=""):
+def evaluate(args, model, tokenizer, prefix=""):
     # Loop to handle MNLI double evaluation (matched, mis-matched)
     eval_output_dir = os.path.join(args.output_dir, prefix)
-    eval_dataset = dataset
+
+    eval_dataset, eval_data_processor = load_examples(args, tokenizer, evaluate="dev")
+    labels = eval_data_processor.labels
+    label_frequences = get_label_frequencies(eval_dataset)
+    label_frequences = [label_frequences[l] for l in labels]
+    label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
+        eval_dataset)) ** -1
+    criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
 
     if not os.path.exists(eval_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(eval_output_dir)
 
     args.eval_batch_size = args.per_gpu_eval_batch_size * max(1, args.n_gpu)
-    # Note that DistributedSampler samples randomly
-    eval_sampler = SequentialSampler(eval_dataset)
-    eval_dataloader = DataLoader(
-        eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate_fn
-    )
 
     # multi-gpu eval
     if args.n_gpu > 1 and not isinstance(model, torch.nn.DataParallel):
@@ -336,7 +353,21 @@ def evaluate(args, model, dataset, tokenizer, criterion, prefix=""):
     nb_eval_steps = 0
     preds = None
     out_label_ids = None
-    for batch in tqdm(eval_dataloader, desc="Evaluating"):
+
+    stage_num = (len(eval_dataset) // args.eval_batch_size) + 1
+    eval_iterator = trange(stage_num, desc="Evaluating")
+    sub_eval_dataset_list = [eval_dataset[i:i + args.eval_batch_size] for i in
+                             range(0, len(eval_dataset), args.eval_batch_size)]
+
+    for step, _ in enumerate(eval_iterator):
+        sub_eval_dataset = sub_eval_dataset_list[step]
+        sub_eval_dataset = eval_data_processor.get_tensor(sub_eval_dataset)
+        eval_sampler = SequentialSampler(sub_eval_dataset)
+        eval_dataloader = DataLoader(
+            sub_eval_dataset, sampler=eval_sampler, batch_size=args.eval_batch_size, collate_fn=collate_fn
+        )
+        batch = eval_dataloader.__iter__().__next__()
+
         model.eval()
         batch = tuple(t.to(args.device) for t in batch)
 
@@ -364,10 +395,10 @@ def evaluate(args, model, dataset, tokenizer, criterion, prefix=""):
 
     eval_loss = eval_loss / nb_eval_steps
     result = {
-        "loss": eval_loss,
-        "macro_f1": f1_score(out_label_ids, preds, average="macro"),
-        "micro_f1": f1_score(out_label_ids, preds, average="micro"),
+        "macro_f1": metrics.f1_score(out_label_ids, preds, average="macro"),
         "score_name": "macro_f1",
+        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds, target_names=labels, digits=4),
+        "loss": eval_loss,
     }
 
     output_eval_file = os.path.join(eval_output_dir, "eval_report.txt")
@@ -381,20 +412,22 @@ def evaluate(args, model, dataset, tokenizer, criterion, prefix=""):
     return result
 
 
-def test(args, model, dataset, tokenizer, criterion, prefix=""):
+def test(args, model, tokenizer, prefix=""):
     # Loop to handle MNLI double testing (matched, mis-matched)
     test_output_dir = os.path.join(args.output_dir, prefix)
-    test_dataset = dataset
+
+    test_dataset, test_data_processor = load_examples(args, tokenizer, evaluate="test")
+    labels = test_data_processor.labels
+    label_frequences = get_label_frequencies(test_dataset)
+    label_frequences = [label_frequences[l] for l in labels]
+    label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
+        test_dataset)) ** -1
+    criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
 
     if not os.path.exists(test_output_dir) and args.local_rank in [-1, 0]:
         os.makedirs(test_output_dir)
 
     args.test_batch_size = args.per_gpu_test_batch_size * max(1, args.n_gpu)
-    # Note that DistributedSampler samples randomly
-    test_sampler = SequentialSampler(test_dataset)
-    test_dataloader = DataLoader(
-        test_dataset, sampler=test_sampler, batch_size=args.test_batch_size, collate_fn=collate_fn
-    )
 
     # multi-gpu test
     if args.n_gpu > 1 and not isinstance(model, torch.nn.DataParallel):
@@ -408,7 +441,21 @@ def test(args, model, dataset, tokenizer, criterion, prefix=""):
     nb_test_steps = 0
     preds = None
     out_label_ids = None
-    for batch in tqdm(test_dataloader, desc="Evaluating"):
+
+    stage_num = (len(test_dataset) // args.test_batch_size) + 1
+    test_iterator = trange(stage_num, desc="Evaluating")
+    sub_test_dataset_list = [test_dataset[i:i + args.test_batch_size] for i in
+                             range(0, len(test_dataset), args.test_batch_size)]
+
+    for step, _ in enumerate(test_iterator):
+        sub_test_dataset = sub_test_dataset_list[step]
+        sub_test_dataset = test_data_processor.get_tensor(sub_test_dataset)
+        test_sampler = SequentialSampler(sub_test_dataset)
+        test_dataloader = DataLoader(
+            sub_test_dataset, sampler=test_sampler, batch_size=args.test_batch_size, collate_fn=collate_fn
+        )
+        batch = test_dataloader.__iter__().__next__()
+
         model.eval()
         batch = tuple(t.to(args.device) for t in batch)
 
@@ -436,9 +483,9 @@ def test(args, model, dataset, tokenizer, criterion, prefix=""):
 
     test_loss = test_loss / nb_test_steps
     result = {
+        "macro_f1": metrics.f1_score(out_label_ids, preds, average="macro"),
+        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds, target_names=labels, digits=4),
         "loss": test_loss,
-        "macro_f1": f1_score(out_label_ids, preds, average="macro"),
-        "micro_f1": f1_score(out_label_ids, preds, average="micro"),
     }
 
     output_test_file = os.path.join(test_output_dir, "test_report.txt")
@@ -459,15 +506,14 @@ def load_examples(args, tokenizer, evaluate="train"):
                                                    args.max_seq_length - args.num_image_embeds - 2)
 
     dataset = []
-    data_tensor = []
     if evaluate == "train":
-        dataset, data_tensor = data_processor.get_train_examples(data_path)
+        dataset = data_processor.get_train_examples(data_path)
     elif evaluate == "dev":
-        dataset, data_tensor = data_processor.get_dev_examples(data_path)
+        dataset = data_processor.get_dev_examples(data_path)
     elif evaluate == "test":
-        dataset, data_tensor = data_processor.get_test_examples(data_path)
+        dataset = data_processor.get_test_examples(data_path)
 
-    return dataset, data_tensor
+    return dataset, data_processor
 
 
 def main():
@@ -707,13 +753,7 @@ def main():
 
     # Training
     if args.do_train:
-        train_dataset, train_tensor = load_examples(args, tokenizer, evaluate="train")
-        label_frequences = get_label_frequencies(train_dataset)
-        label_frequences = [label_frequences[l] for l in labels]
-        label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) /
-                         len(train_dataset)) ** -1
-        criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
-        global_step, tr_loss = train(args, train_tensor, model, tokenizer, criterion)
+        global_step, tr_loss = train(args, model, tokenizer)
         logger.info(" global_step = %s, average loss = %s", global_step, tr_loss)
 
     # # Saving best-practices: if you use defaults names for the model, you can reload it using from_pretrained()
@@ -750,13 +790,6 @@ def main():
             logging.getLogger("transformers.modeling_utils").setLevel(logging.WARN)  # Reduce logging
         logger.info("Evaluate the following checkpoints: %s", checkpoints)
 
-        eval_dataset, eval_tensor = load_examples(args, tokenizer, evaluate="dev")
-        label_frequences = get_label_frequencies(eval_dataset)
-        label_frequences = [label_frequences[l] for l in labels]
-        label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
-            eval_dataset)) ** -1
-        criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
-
         checkpoint_score_max = 0
         checkpoint_score_max_checkpoint = ""
         for checkpoint in checkpoints:
@@ -767,8 +800,7 @@ def main():
             model.load_state_dict(torch.load(os.path.join(checkpoint, WEIGHTS_NAME)))
             model.to(args.device)
             tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
-            result = evaluate(args=args, model=model, dataset=eval_tensor, tokenizer=tokenizer, criterion=criterion,
-                              prefix=prefix)
+            result = evaluate(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
             result = dict((k + "_{}".format(global_step), v) for k, v in result.items())
             results.update(result)
             checkpoint_score = result[result['score_name_' + global_step] + "_" + global_step]
@@ -781,12 +813,6 @@ def main():
     # testing
     results = {}
     if args.do_test and args.local_rank in [-1, 0]:
-        test_dataset, test_tensor = load_examples(args, tokenizer, evaluate="test")
-        label_frequences = get_label_frequencies(test_dataset)
-        label_frequences = [label_frequences[l] for l in labels]
-        label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
-            test_dataset)) ** -1
-        criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
         checkpoint = os.path.join(args.output_dir, "checkpoint-best")
         logger.info("Predicting the following best checkpoint: %s", checkpoint)
         prefix = os.path.join("checkpoint-best", "test")
@@ -795,7 +821,7 @@ def main():
         model.load_state_dict(torch.load(os.path.join(checkpoint, WEIGHTS_NAME)))
         model.to(args.device)
         tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
-        test(args=args, model=model, dataset=test_tensor, tokenizer=tokenizer, criterion=criterion, prefix=prefix)
+        test(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
 
     # # predicting
     # results = {}

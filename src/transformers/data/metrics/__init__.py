@@ -67,6 +67,7 @@ if _has_sklearn:
             "acc_and_f1": (acc + f1) / 2,
         }
 
+
     def classification_report(preds, labels, target_names=None):
         f1 = metrics.f1_score(y_true=labels, y_pred=preds, average='macro')
         report = metrics.classification_report(y_true=labels, y_pred=preds, target_names=target_names, digits=4)
@@ -75,6 +76,7 @@ if _has_sklearn:
             "score_name": "macro-f1",
             "macro-f1": f1,
         }
+
 
     def pearson_and_spearman(preds, labels):
         pearson_corr = pearsonr(preds, labels)[0]
@@ -113,6 +115,7 @@ if _has_sklearn:
         else:
             raise KeyError(task_name)
 
+
     def xnli_compute_metrics(task_name, preds, labels):
         assert len(preds) == len(labels)
         if task_name == "xnli":
@@ -135,6 +138,12 @@ if _has_sklearn:
             return classification_report(preds, labels, target_names)
         elif task_name in ["fakeddit2way", "fakeddit3way", "fakeddit5way", "fakedditfinegrained"]:
             return classification_report(preds, labels, target_names)
+        elif task_name in ["fakeddit2waytoliar", "fakeddit3waytoliar",
+                           "fakeddit2waytofakenewsnetgossipcop", "fakeddit2waytofakenewsnetpolitifact",
+                           "fakeddit3waytofever"]:
+            return classification_report(preds, labels, target_names)
+        elif task_name in ["fakenewsnet", "fakenewsnetgossipcop", "fakenewsnetpolitifact"]:
+            return classification_report(preds, labels, target_names)
         elif task_name == "wuhan2019ncov":
             return classification_report(preds, labels, target_names)
         elif task_name in ["offenseval2019task1", "offenseval2019task2", "offenseval2019task3"]:
@@ -143,5 +152,3 @@ if _has_sklearn:
             return classification_report(preds, labels, target_names)
         else:
             raise KeyError(task_name)
-
-

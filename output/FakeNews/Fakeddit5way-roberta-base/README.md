@@ -40,4 +40,9 @@ stage_3: 全部数据, 1epoch
 
     dev：f1-macro = 0.7988
     test: f1-macro = 0.8021
+    
+stage_4: 全部数据, 10epoch
+
+    dev：f1-macro = 0.8217
+    test: f1-macro = 0.8249
 

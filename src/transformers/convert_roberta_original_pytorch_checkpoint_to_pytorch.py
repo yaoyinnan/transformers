@@ -18,11 +18,16 @@
 import argparse
 import logging
 import pathlib
+import os
+import sys
 
-import fairseq
+o_path = os.getcwd()
+sys.path.append(o_path)
+
+import tools.fairseq.fairseq as fairseq
 import torch
-from fairseq.models.roberta import RobertaModel as FairseqRobertaModel
-from fairseq.modules import TransformerSentenceEncoderLayer
+from tools.fairseq.fairseq.models.roberta import RobertaModel as FairseqRobertaModel
+from tools.fairseq.fairseq.modules import TransformerSentenceEncoderLayer
 from packaging import version
 
 from .modeling_bert import (

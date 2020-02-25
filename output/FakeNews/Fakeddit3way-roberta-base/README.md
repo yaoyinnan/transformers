@@ -36,8 +36,13 @@ stage_2: 41434 + 17132 + 41434 = 10W， 1epoch
     dev：f1-macro = 0.8022
     test: f1-macro = 0.8094
     
-stage_2: 全部数据， 1epoch
+stage_3: 全部数据， 1epoch
 
     dev：f1-macro = 0.8576
-    test: f1-macro = 0.8657
+    test: f1-macro = 0.8657 
+       
+stage_4: 全部数据， 10epoch
+
+    dev：f1-macro = 0.8733
+    test: f1-macro = 0.8716
 
