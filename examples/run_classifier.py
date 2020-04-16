@@ -25,6 +25,7 @@ import os
 import random
 import csv
 import shutil
+import tensorflow as tf
 
 import numpy as np
 import torch
@@ -134,12 +135,31 @@ def train(args, train_dataset, model, tokenizer):
 
     # Prepare optimizer and schedule (linear warmup and decay)
     no_decay = ["bias", "LayerNorm.weight"]
+    # unfreeze_layers = ['layer.10', 'layer.11', 'bert.pooler', 'out.']
+    # unfreeze_layers = ['layer.10', 'layer.11', 'bert.pooler', 'out.']
+    # params = [[], []]
+    # for name, param in model.named_parameters():
+    #     param.requires_grad = False
+    #     for ele in unfreeze_layers:
+    #         if ele in name:
+    #             param.requires_grad = True
+    #             break
+    #     if not any(nd in name for nd in no_decay):
+    #         params[0].append(param)
+    #     else:
+    #         params[1].append(param)
+
     optimizer_grouped_parameters = [
         {
             "params": [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)],
+            # "params": params[0],
             "weight_decay": args.weight_decay,
         },
-        {"params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], "weight_decay": 0.0},
+        {
+            "params": [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)],
+            # "params": params[1],
+            "weight_decay": 0.0
+        },
     ]
 
     optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=args.adam_epsilon)
@@ -333,6 +353,7 @@ def evaluate(args, model, tokenizer, prefix=""):
         nb_eval_steps = 0
         preds = None
         out_label_ids = None
+        preds_normal = []
         for batch in tqdm(eval_dataloader, desc="Evaluating"):
             model.eval()
             batch = tuple(t.to(args.device) for t in batch)
@@ -345,6 +366,9 @@ def evaluate(args, model, tokenizer, prefix=""):
                     )  # XLM, DistilBERT, RoBERTa, and XLM-RoBERTa don't use segment_ids
                 outputs = model(**inputs)
                 tmp_eval_loss, logits = outputs[:2]
+
+                for item in torch.softmax(logits, dim=1).tolist():
+                    preds_normal.append(item)
 
                 eval_loss += tmp_eval_loss.mean().item()
             nb_eval_steps += 1
@@ -360,6 +384,7 @@ def evaluate(args, model, tokenizer, prefix=""):
             preds = np.argmax(preds, axis=1)
         elif args.output_mode == "regression":
             preds = np.squeeze(preds)
+
         processor = processors[args.task_name]()
         result = compute_metrics(eval_task, preds, out_label_ids, processor.get_labels())
         results.update(result)
@@ -372,17 +397,40 @@ def evaluate(args, model, tokenizer, prefix=""):
                 writer.write("%s = %s\n" % (key, str(result[key])))
             writer.write("%s = %s\n" % ("loss", str(eval_loss)))
 
-        preds = processor.label_index_to_label(preds)
-
         if len(guids) == len(preds):
-            output_result_file = os.path.join(eval_output_dir, "eval_results.csv")
-            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
-                predict_file_writer = csv.writer(predict_file, delimiter=',')
-                headers = ["id", "label"]
-                predict_file_writer.writerow(headers)
-                for index in range(len(guids)):
-                    predict_file_writer.writerow([guids[index], preds[index]])
+            if args.output_mode == "classification":
+                preds = processor.label_index_to_label(preds)
+
+                output_result_file = os.path.join(eval_output_dir, "eval_results.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id", "label"]
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index], preds[index]])
+                    logger.info("Save " + eval_output_dir + " down.")
+                result_file.close()
+
+                output_result_file = os.path.join(eval_output_dir, "eval_probability.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id"] + processor.get_labels()
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index]] + preds_normal[index])
                 logger.info("Save " + eval_output_dir + " down.")
+                result_file.close()
+
+            elif args.output_mode == "regression":
+                output_result_file = os.path.join(eval_output_dir, "eval_regression.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id", "reg"]
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index], preds[index]])
+                    logger.info("Save " + eval_output_dir + " down.")
+                result_file.close()
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
@@ -412,12 +460,13 @@ def test(args, model, tokenizer, prefix=""):
             model = torch.nn.DataParallel(model)
         # Test!
         logger.info("***** Running testing {} *****".format(prefix))
-        logger.info("  Num examples = %d", len(test_dataset))
+        logger.info("  Num examplfrom_pretrainedes = %d", len(test_dataset))
         logger.info("  Batch size = %d", args.test_batch_size)
         test_loss = 0.0
         nb_test_steps = 0
         preds = None
         out_label_ids = None
+        preds_normal = []
         for batch in tqdm(test_dataloader, desc="testuating"):
             model.eval()
             batch = tuple(t.to(args.device) for t in batch)
@@ -431,6 +480,12 @@ def test(args, model, tokenizer, prefix=""):
 
                 outputs = model(**inputs)
                 tmp_test_loss, logits = outputs[:2]
+
+                # 先归一化，再softmax
+                # for item in torch.softmax(torch.nn.functional.normalize(logits, p=2, dim=1), dim=1).tolist():
+                #     preds_normal.append(item)
+                for item in torch.softmax(logits, dim=1).tolist():
+                    preds_normal.append(item)
 
                 test_loss += tmp_test_loss.mean().item()
             nb_test_steps += 1
@@ -457,18 +512,41 @@ def test(args, model, tokenizer, prefix=""):
                 logger.info("  %s = %s", key, str(result[key]))
                 writer.write("%s = %s\n" % (key, str(result[key])))
             writer.write("%s = %s\n" % ("loss", str(test_loss)))
-
-        preds = processor.label_index_to_label(preds)
+        writer.close()
 
         if len(guids) == len(preds):
-            output_result_file = os.path.join(test_output_dir, "test_results.csv")
-            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
-                predict_file_writer = csv.writer(predict_file, delimiter=',')
-                headers = ["id", "label"]
-                predict_file_writer.writerow(headers)
-                for index in range(len(guids)):
-                    predict_file_writer.writerow([guids[index], preds[index]])
-                logger.info("Save " + test_output_dir + " down.")
+            if args.output_mode == "classification":
+                preds = processor.label_index_to_label(preds)
+
+                output_result_file = os.path.join(test_output_dir, "test_results.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id", "label"]
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index], preds[index]])
+                    logger.info("Save " + test_output_dir + " down.")
+                result_file.close()
+
+                output_result_file = os.path.join(test_output_dir, "test_probability.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id"] + processor.get_labels()
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index]] + preds_normal[index])
+                    logger.info("Save " + test_output_dir + " down.")
+                    result_file.close()
+            elif args.output_mode == "regression":
+                output_result_file = os.path.join(test_output_dir, "test_regression.csv")
+                with open(output_result_file, "w", encoding='utf-8', newline='') as result_file:
+                    predict_file_writer = csv.writer(result_file, delimiter=',')
+                    headers = ["id"] + processor.get_labels()
+                    predict_file_writer.writerow(headers)
+                    for index in range(len(guids)):
+                        predict_file_writer.writerow([guids[index]] + preds_normal[index])
+                    logger.info("Save " + test_output_dir + " down.")
+                result_file.close()
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
                 len(guids), len(preds)))
@@ -502,6 +580,7 @@ def pred(args, model, tokenizer, prefix=""):
         logger.info("  Batch size = %d", args.pred_batch_size)
         nb_pred_steps = 0
         preds = None
+        preds_normal = []
         for batch in tqdm(pred_dataloader, desc="Predicting"):
             model.eval()
             batch = tuple(t.to(args.device) for t in batch)
@@ -515,32 +594,49 @@ def pred(args, model, tokenizer, prefix=""):
                 outputs = model(**inputs)
                 logits = outputs[0]
 
+                for item in torch.softmax(logits, dim=1).tolist():
+                    preds_normal.append(item)
+
             nb_pred_steps += 1
             if preds is None:
                 preds = logits.detach().cpu().numpy()
             else:
                 preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
 
-        if args.output_mode == "classification":
-            preds = np.argmax(preds, axis=1).tolist()
-        elif args.output_mode == "regression":
-            preds = np.squeeze(preds).tolist()
+        preds_c = np.argmax(preds, axis=1).tolist()
 
         processor = processors[args.task_name]()
-        preds = processor.label_index_to_label(preds)
+        preds_c = processor.label_index_to_label(preds_c)
 
-        if len(guids) == len(preds):
+        if len(guids) == len(preds_c):
             output_result_file = os.path.join(pred_output_dir, "pred_results.csv")
             with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
                 predict_file_writer = csv.writer(predict_file, delimiter=',')
                 headers = ["id", "label"]
                 predict_file_writer.writerow(headers)
                 for index in range(len(guids)):
-                    predict_file_writer.writerow([guids[index], preds[index]])
+                    predict_file_writer.writerow([guids[index], preds_c[index]])
+                logger.info("Save " + pred_output_dir + " down.")
+
+            output_result_file = os.path.join(pred_output_dir, "regression.csv")
+            with open(output_result_file, "w", encoding='utf-8', newline='') as predict_file:
+                predict_file_writer = csv.writer(predict_file, delimiter=',')
+                # headers = "id,fake_prob_label_0c,fake_prob_label_2c,fake_prob_label_all,real_prob_label_0c,real_prob_label_2c,real_prob_label_all,ncw_prob_label_0c,ncw_prob_label_2c,ncw_prob_label_all".split(
+                #     ',')
+                # headers = "id,fake,real,ncw".split(',')
+                headers = "id,fake,real".split(',')
+                predict_file_writer.writerow(headers)
+                for index in range(len(guids)):
+                    # line = [guids[index]] + \
+                    #        [preds_r_normal[index][1]] + \
+                    #        [preds_r_normal[index][2]] + \
+                    #        [preds_r_normal[index][0]]
+                    line = [guids[index]] + preds_normal[index]
+                    predict_file_writer.writerow(line)
                 logger.info("Save " + pred_output_dir + " down.")
         else:
             raise ValueError("The length of guid and the length of pred is not match: len(guid) = %s, len(pred) %s" % (
-                len(guids), len(preds)))
+                len(guids), len(preds_c)))
 
     return results
 

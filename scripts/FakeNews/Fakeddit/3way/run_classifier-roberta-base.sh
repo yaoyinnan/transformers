@@ -3,13 +3,13 @@ set -eux
 
 export TASK=FakeNews
 export TASK_NAME=Fakeddit3way
-export DATA_DIR=data/${TASK}/Fakeddit/3way
+export DATA_DIR=data/${TASK}/Fakeddit/2way
 export OUTPUT_NAME=output
 export MODEL=roberta
 export MODEL_NAME=roberta-base
 
 export TRAIN_BATCH_SIZE=4
-export EVAL_BATCH_SIZE=256
+export EVAL_BATCH_SIZE=64
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=2000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
@@ -18,7 +18,7 @@ export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX
 
 
 export STAGE_NUM=1
-export NEXT_STAGE_NUM=2
+export NEXT_STAGE_NUM=4
 
 python ./examples/run_classifier.py \
     --model_type ${MODEL} \
@@ -39,6 +39,6 @@ python ./examples/run_classifier.py \
     --overwrite_cache \
     --eval_all_checkpoints \
     --do_test \
-    --do_eval \
-    --do_train \
-#    --do_predict \
+#    --do_pred \
+#    --do_eval \
+#    --do_train \

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 export GLUE_DIR=data/glue
-export TASK_NAME=SST-2
+export TASK_NAME=STS-B
 
 python ./examples/run_glue.py \
     --model_type bert \

@@ -26,6 +26,9 @@ bert-base
 
 ### results
 
-stage_1: 平衡49W， 1epoch
+stage_1: 全部数据， 1epoch
+
+    dev：f1-macro = 0.8655
+    test: f1-macro = 0.8639
 
    

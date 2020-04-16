@@ -439,7 +439,7 @@ def test(args, model, tokenizer, criterion, prefix=""):
         "micro_f1": f1_score(out_label_ids, preds, average="micro"),
     }
 
-    output_test_file = os.path.join(test_output_dir, "test_report.txt")
+    output_test_file = os.path.join(test_output_dir, "test_report_1.txt")
     with open(output_test_file, "w") as writer:
         logger.info("***** Test results {} *****".format(prefix))
         for key in sorted(result.keys()):

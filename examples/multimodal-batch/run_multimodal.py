@@ -63,7 +63,7 @@ from src.transformers import (
     get_linear_schedule_with_warmup,
 )
 from utils_multimodal import ImageEncoder, collate_fn, get_image_transforms, get_label_frequencies, \
-    my_tasks_num_labels, my_processors, my_output_modes
+    my_tasks_num_labels as tasks_num_labels, my_processors as processors, my_output_modes as output_modes
 
 try:
     from torch.utils.tensorboard import SummaryWriter
@@ -329,9 +329,8 @@ def evaluate(args, model, tokenizer, prefix=""):
     eval_output_dir = os.path.join(args.output_dir, prefix)
 
     eval_dataset, eval_data_processor = load_examples(args, tokenizer, evaluate="dev")
-    labels = eval_data_processor.labels
     label_frequences = get_label_frequencies(eval_dataset)
-    label_frequences = [label_frequences[l] for l in labels]
+    label_frequences = [label_frequences[l] for l in eval_data_processor.labels]
     label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
         eval_dataset)) ** -1
     criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
@@ -372,7 +371,6 @@ def evaluate(args, model, tokenizer, prefix=""):
         batch = tuple(t.to(args.device) for t in batch)
 
         with torch.no_grad():
-            batch = tuple(t.to(args.device) for t in batch)
             labels = batch[5]
             inputs = {
                 "input_ids": batch[0],
@@ -387,17 +385,26 @@ def evaluate(args, model, tokenizer, prefix=""):
             eval_loss += tmp_eval_loss.mean().item()
         nb_eval_steps += 1
         if preds is None:
-            preds = torch.sigmoid(logits).detach().cpu().numpy() > 0.5
-            out_label_ids = labels.detach().cpu().numpy()
+            preds = logits.detach().cpu().numpy()
+            out_label_ids = labels[:, 1].int().detach().cpu().numpy()
         else:
-            preds = np.append(preds, torch.sigmoid(logits).detach().cpu().numpy() > 0.5, axis=0)
-            out_label_ids = np.append(out_label_ids, labels.detach().cpu().numpy(), axis=0)
+            preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+            out_label_ids = np.append(out_label_ids, labels[:, 1].int().detach().cpu().numpy(), axis=0)
+
+    # preds = eval_data_processor.label_index_to_label(preds)
 
     eval_loss = eval_loss / nb_eval_steps
+
+    if args.output_mode == "classification":
+        preds = np.argmax(preds, axis=1)
+    elif args.output_mode == "regression":
+        preds = np.squeeze(preds)
+
     result = {
         "macro_f1": metrics.f1_score(out_label_ids, preds, average="macro"),
         "score_name": "macro_f1",
-        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds, target_names=labels, digits=4),
+        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds,
+                                                target_names=eval_data_processor.labels, digits=4),
         "loss": eval_loss,
     }
 
@@ -417,9 +424,8 @@ def test(args, model, tokenizer, prefix=""):
     test_output_dir = os.path.join(args.output_dir, prefix)
 
     test_dataset, test_data_processor = load_examples(args, tokenizer, evaluate="test")
-    labels = test_data_processor.labels
     label_frequences = get_label_frequencies(test_dataset)
-    label_frequences = [label_frequences[l] for l in labels]
+    label_frequences = [label_frequences[l] for l in test_data_processor.labels]
     label_weights = (torch.tensor(label_frequences, device=args.device, dtype=torch.float) / len(
         test_dataset)) ** -1
     criterion = nn.BCEWithLogitsLoss(pos_weight=label_weights)
@@ -443,7 +449,7 @@ def test(args, model, tokenizer, prefix=""):
     out_label_ids = None
 
     stage_num = (len(test_dataset) // args.test_batch_size) + 1
-    test_iterator = trange(stage_num, desc="Evaluating")
+    test_iterator = trange(stage_num, desc="Testing")
     sub_test_dataset_list = [test_dataset[i:i + args.test_batch_size] for i in
                              range(0, len(test_dataset), args.test_batch_size)]
 
@@ -475,20 +481,29 @@ def test(args, model, tokenizer, prefix=""):
             test_loss += tmp_test_loss.mean().item()
         nb_test_steps += 1
         if preds is None:
-            preds = torch.sigmoid(logits).detach().cpu().numpy() > 0.5
-            out_label_ids = labels.detach().cpu().numpy()
+            preds = logits.detach().cpu().numpy()
+            out_label_ids = labels[:, 1].int().detach().cpu().numpy()
         else:
-            preds = np.append(preds, torch.sigmoid(logits).detach().cpu().numpy() > 0.5, axis=0)
-            out_label_ids = np.append(out_label_ids, labels.detach().cpu().numpy(), axis=0)
+            preds = np.append(preds, logits.detach().cpu().numpy(), axis=0)
+            out_label_ids = np.append(out_label_ids, labels[:, 1].int().detach().cpu().numpy(), axis=0)
+
+    # preds = eval_data_processor.label_index_to_label(preds)
 
     test_loss = test_loss / nb_test_steps
+
+    if args.output_mode == "classification":
+        preds = np.argmax(preds, axis=1)
+    elif args.output_mode == "regression":
+        preds = np.squeeze(preds)
+
     result = {
         "macro_f1": metrics.f1_score(out_label_ids, preds, average="macro"),
-        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds, target_names=labels, digits=4),
+        "report": metrics.classification_report(y_true=out_label_ids, y_pred=preds,
+                                                target_names=test_data_processor.labels, digits=4),
         "loss": test_loss,
     }
 
-    output_test_file = os.path.join(test_output_dir, "test_report.txt")
+    output_test_file = os.path.join(test_output_dir, "test_report_1.txt")
     with open(output_test_file, "w") as writer:
         logger.info("***** Test results {} *****".format(prefix))
         for key in sorted(result.keys()):
@@ -502,8 +517,8 @@ def load_examples(args, tokenizer, evaluate="train"):
     data_path = args.data_dir
     transforms = get_image_transforms()
     image_dir = args.image_dir
-    data_processor = my_processors[args.task_name](image_dir, tokenizer, transforms,
-                                                   args.max_seq_length - args.num_image_embeds - 2)
+    data_processor = processors[args.task_name](image_dir, tokenizer, transforms,
+                                                args.max_seq_length - args.num_image_embeds - 2)
 
     dataset = []
     if evaluate == "train":
@@ -586,6 +601,8 @@ def main():
     parser.add_argument("--do_eval", action="store_true", help="Whether to run eval on the dev set.")
     parser.add_argument("--do_test", action='store_true',
                         help="Whether to run test on the test set.")
+    parser.add_argument("--do_bitahub", action='store_true',
+                        help="Whether to run eval on the set at bitahub.")
     parser.add_argument("--do_predict", action='store_true',
                         help="Whether to run predict on the predict set.")
     parser.add_argument(
@@ -725,8 +742,9 @@ def main():
         torch.distributed.barrier()  # Make sure only the first process in distributed training will download model & vocab
 
     # Setup model
-    labels = my_processors[args.task_name].labels
-    num_labels = my_tasks_num_labels[args.task_name]
+    args.output_mode = output_modes[args.task_name]
+    labels = processors[args.task_name].labels
+    num_labels = tasks_num_labels[args.task_name]
     args.model_type = args.model_type.lower()
     config_class, model_class, tokenizer_class = MODEL_CLASSES[args.model_type]
     transformer_config = config_class.from_pretrained(
@@ -797,7 +815,7 @@ def main():
             prefix = ("checkpoint-" + str(checkpoint.split('-')[-1])) if checkpoint.find('checkpoint') != -1 else ""
             model_path = os.path.join(args.output_dir, prefix)
             model = MMBTForClassification(config, transformer, img_encoder)
-            model.load_state_dict(torch.load(os.path.join(checkpoint, WEIGHTS_NAME)))
+            model.load_state_dict(torch.load(os.path.join(model_path, WEIGHTS_NAME)))
             model.to(args.device)
             tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
             result = evaluate(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
@@ -813,14 +831,25 @@ def main():
     # testing
     results = {}
     if args.do_test and args.local_rank in [-1, 0]:
-        checkpoint = os.path.join(args.output_dir, "checkpoint-best")
-        logger.info("Predicting the following best checkpoint: %s", checkpoint)
-        prefix = os.path.join("checkpoint-best", "test")
         model_path = os.path.join(args.output_dir, "checkpoint-best")
+        logger.info("Predicting the following best checkpoint: %s", model_path)
+        prefix = os.path.join("checkpoint-best", "test")
         model = MMBTForClassification(config, transformer, img_encoder)
-        model.load_state_dict(torch.load(os.path.join(checkpoint, WEIGHTS_NAME)))
+        model.load_state_dict(torch.load(os.path.join(model_path, WEIGHTS_NAME)))
         model.to(args.device)
         tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
+        test(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
+
+    if args.do_bitahub:
+        model_path = args.model_name_or_path
+        logger.info("Predicting the following best checkpoint: %s", model_path)
+        model = MMBTForClassification(config, transformer, img_encoder)
+        model.load_state_dict(torch.load(os.path.join(model_path, WEIGHTS_NAME)))
+        model.to(args.device)
+        tokenizer = tokenizer_class.from_pretrained(model_path, do_lower_case=args.do_lower_case)
+        prefix = "checkpoint-best"
+        evaluate(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
+        prefix = os.path.join("checkpoint-best", "test")
         test(args=args, model=model, tokenizer=tokenizer, prefix=prefix)
 
     # # predicting

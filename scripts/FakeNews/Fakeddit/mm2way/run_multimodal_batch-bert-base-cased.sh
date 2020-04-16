@@ -8,8 +8,8 @@ export OUTPUT_NAME=output
 export MODEL=bert
 export MODEL_NAME=bert-base-cased
 
-export TRAIN_BATCH_SIZE=16
-export EVAL_BATCH_SIZE=16
+export TRAIN_BATCH_SIZE=144
+export EVAL_BATCH_SIZE=1024
 export DEFAULT_BATCH_SIZE=8
 export DEFAULT_SAVE_STEPS=1000
 export SAVE_STEPS=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_SAVE_STEPS}/2))
@@ -19,7 +19,7 @@ export MAX_SEQ_LENGTH=$((${DEFAULT_BATCH_SIZE}/${TRAIN_BATCH_SIZE}*${DEFAULT_MAX
 export STAGE_NUM=1
 export NEXT_STAGE_NUM=3
 
-python ./examples/multimodal-test/run_multimodal.py \
+python ./examples/multimodal-batch/run_multimodal.py \
     --model_type ${MODEL} \
     --model_name_or_path ${MODEL_NAME} \
     --image_model ./models/resnet/resnet152.pth \
@@ -35,9 +35,11 @@ python ./examples/multimodal-test/run_multimodal.py \
     --num_image_embeds 3 \
     --num_train_epochs 1 \
     --eval_all_checkpoints  \
+    --no_cuda \
     --do_test  \
     --do_eval  \
     --do_train \
-#    --no_cuda \
+    --do_bitahub  \
+#    --model_name_or_path ${OUTPUT_NAME}/${TASK}/${TASK_NAME}-${MODEL_NAME}/stage_${NEXT_STAGE_NUM}/checkpoint-20924 \
 #    --gradient_accumulation_steps 20 \
 

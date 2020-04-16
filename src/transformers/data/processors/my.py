@@ -17,6 +17,7 @@
 
 import logging
 import os
+import numpy as np
 
 from ...file_utils import is_tf_available
 from .utils import DataProcessor, InputExample, InputFeatures
@@ -389,7 +390,7 @@ class OffensEval2020Task1EnglishProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "88train.tsv")))
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "88train.tsv")), "train")
 
@@ -398,10 +399,15 @@ class OffensEval2020Task1EnglishProcessor(DataProcessor):
         return self._create_examples(
             self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
 
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test-goldlabels.tsv")), "test")
+
     def get_pred_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "OLID1.0_task-a_test.tsv")), "pred")
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "pred")
 
     def get_labels(self):
         """See base class."""
@@ -418,6 +424,212 @@ class OffensEval2020Task1EnglishProcessor(DataProcessor):
                 label = line[0]
                 text_a = line[1]
                 text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type in ["test"]:
+                guid = line[0]
+                text_a = line[1]
+                label = line[2]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "pred":
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class OffensEval2020ArabicProcessor(DataProcessor):
+    """Processor for the OffensEval2020Arabic data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "pred")
+
+    def get_labels(self):
+        """See base class."""
+        return ["OFF", "NOT"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            if set_type in ["train", "dev"]:
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                label = line[2]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "pred":
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class OffensEval2020DanishProcessor(DataProcessor):
+    """Processor for the OffensEval2020Danish data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "pred")
+
+    def get_labels(self):
+        """See base class."""
+        return ["OFF", "NOT"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            if set_type in ["train", "dev"]:
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                label = line[2]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "pred":
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class OffensEval2020GreekProcessor(DataProcessor):
+    """Processor for the OffensEval2020Greek data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "pred")
+
+    def get_labels(self):
+        """See base class."""
+        return ["OFF", "NOT"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            if set_type in ["train", "dev"]:
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                label = line[2]
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "pred":
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
+class OffensEval2020TurkishProcessor(DataProcessor):
+    """Processor for the OffensEval2020Turkish data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test.tsv")), "pred")
+
+    def get_labels(self):
+        """See base class."""
+        return ["OFF", "NOT"]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            if set_type in ["train", "dev"]:
+                guid = line[0]
+                text_a = line[1]
+                text_a = self.preprocess(text_a)
+                label = line[2]
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
             elif set_type == "pred":
                 guid = line[0]
@@ -731,9 +943,9 @@ class Fakeddit2wayProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train_10.tsv")))
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train_10.tsv"), '"'), "train")
+            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
@@ -748,7 +960,8 @@ class Fakeddit2wayProcessor(DataProcessor):
     def get_pred_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "predict.tsv"), '"'), "pred")
+            # self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "pred")
+            self._read_json_normal(os.path.join(data_dir, "test_comments.json")), "pred")
 
     def get_labels(self):
         """See base class."""
@@ -758,28 +971,40 @@ class Fakeddit2wayProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            guid = line[0]
-            if set_type == "train":
-                label = line[13]
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "dev":
-                label = line[13]
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "test":
-                label = line[14]
-                text_a = line[13]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "predict":
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            # if i == 10:
+            #     break
+            if set_type in ["train", "dev", "test"]:
+                if i == 0:
+                    continue
+                if set_type == "train":
+                    guid = line[2]
+                    label = line[13]
+                    text_a = line[12]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+                elif set_type == "dev":
+                    guid = line[2]
+                    label = line[13]
+                    text_a = line[12]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+                elif set_type == "test":
+                    guid = line[3]
+                    label = line[14]
+                    text_a = line[13]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+                # elif set_type == "pred":
+                #     guid = line[3]
+                #     text_a = line[13]
+                #     text_a = self.preprocess(text_a)
+                #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "pred":
+                for item in line['comments']:
+                    guid = item['id']
+                    text_a = str(item['body'])
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
         return examples
 
 
@@ -812,7 +1037,8 @@ class Fakeddit3wayProcessor(DataProcessor):
     def get_pred_examples(self, data_dir):
         """See base class."""
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "predict.tsv"), '"'), "pred")
+            # self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "pred")
+            self._read_json_normal(os.path.join(data_dir, "test_comments.json")), "pred")
 
     def get_labels(self):
         """See base class."""
@@ -822,28 +1048,40 @@ class Fakeddit3wayProcessor(DataProcessor):
         """Creates examples for the training and dev sets."""
         examples = []
         for (i, line) in enumerate(lines):
-            if i == 0:
-                continue
-            guid = line[0]
-            if set_type == "train":
-                label = line[14]
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "dev":
-                label = line[14]
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "test":
-                label = line[15]
-                text_a = line[13]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
-            elif set_type == "predict":
-                text_a = line[12]
-                text_a = self.preprocess(text_a)
-                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            # if i == 100:
+            #     break
+            if set_type in ["train", "dev", "test"]:
+                if i == 0:
+                    continue
+                if set_type == "train":
+                    guid = line[2]
+                    label = line[14]
+                    text_a = line[12]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+                elif set_type == "dev":
+                    guid = line[2]
+                    label = line[14]
+                    text_a = line[12]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+                elif set_type == "test":
+                    guid = line[3]
+                    label = line[15]
+                    text_a = line[13]
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            # elif set_type == "pred":
+            #     guid = line[3]
+            #     text_a = line[12]
+            #     text_a = self.preprocess(text_a)
+            #     examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+            elif set_type == "pred":
+                for item in line['comments']:
+                    guid = item['id']
+                    text_a = str(item['body'])
+                    text_a = self.preprocess(text_a)
+                    examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
         return examples
 
 
@@ -923,9 +1161,9 @@ class FakedditFineGrainedProcessor(DataProcessor):
 
     def get_train_examples(self, data_dir):
         """See base class."""
-        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.tsv")))
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "eda_train_r.tsv")))
         return self._create_examples(
-            self._read_tsv(os.path.join(data_dir, "train.tsv"), '"'), "train")
+            self._read_tsv(os.path.join(data_dir, "eda_train_r.tsv"), '"'), "train")
 
     def get_dev_examples(self, data_dir):
         """See base class."""
@@ -944,34 +1182,40 @@ class FakedditFineGrainedProcessor(DataProcessor):
 
     def get_labels(self):
         """See base class."""
-        return [
-            # True
-            'usnews',
-            'mildlyinteresting',
-            'photoshopbattles',
-            'nottheonion',
-            'neutralnews',
-            'pic',
-            'usanews',
-            'upliftingnews',
-            # Satire/Parody
-            'theonion',
-            'fakealbumcovers',
-            'satire',
-            'waterfordwhispersnews',
-            # Misleading Content
-            'propagandaposters',
-            'fakefacts',
-            'savedyouaclick',
-            # Imposter Content
-            'subredditsimulator',
-            'subsimulatorgpt2',
-            # False Connection
-            'misleadingthumbnails',
-            'confusing_perspective',
-            'pareidolia',
-            'fakehistoryporn',
-        ]
+        # True
+        true_list = ['usnews',
+                     'mildlyinteresting',
+                     'photoshopbattles',
+                     'nottheonion',
+                     'neutralnews',
+                     'pic',
+                     'usanews',
+                     'upliftingnews']
+        # Satire/Parody
+        sp_list = ['theonion',
+                   'fakealbumcovers',
+                   'satire',
+                   'waterfordwhispersnews']
+        # Misleading Content
+        mc_list = ['propagandaposters',
+                   'fakefacts',
+                   'savedyouaclick']
+        # Imposter Content
+        ic_list = ['subredditsimulator',
+                   'subsimulatorgpt2']
+        # False Connection
+        fc_list = ['misleadingthumbnails',
+                   'confusing_perspective',
+                   'pareidolia',
+                   'fakehistoryporn']
+
+        # return ic_list
+
+        return true_list + \
+               sp_list + \
+               mc_list + \
+               ic_list + \
+               fc_list
 
     def _create_examples(self, lines, set_type):
         """Creates examples for the training and dev sets."""
@@ -982,6 +1226,7 @@ class FakedditFineGrainedProcessor(DataProcessor):
             guid = line[0]
             if set_type == "train":
                 label = line[11]
+                print(line)
                 text_a = line[12]
                 text_a = self.preprocess(text_a)
                 examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
@@ -1296,6 +1541,81 @@ class Fakeddit3wayToFEVERProcessor(DataProcessor):
         return examples
 
 
+class FakedditStanceProcessor(DataProcessor):
+    """Processor for the FakedditStance data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            tensor_dict["sentence2"].numpy().decode("utf-8"),
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "validate_stance.tsv")))
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "validate_stance.tsv"), '"'), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test_stance.tsv"), '"'), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_tsv(os.path.join(data_dir, "test_stance.tsv"), '"'), "test")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            # self._read_tsv(os.path.join(data_dir, "test.tsv"), '"'), "pred")
+            self._read_json_normal(os.path.join(data_dir, "test_comments.json")), "pred")
+
+    def get_labels(self):
+        """See base class."""
+        # return ["-1", "0", "1"]
+        return [None]
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        # sub_lines = []
+        # for i, v in enumerate(lines):
+        #     if i == 0:
+        #         continue
+        #     if float(v[-1]) <= 50:
+        #         sub_lines.append(v)
+        MAX = np.log(max([float(v[-1]) if i > 0 else 0 for i, v in enumerate(lines)]) + 1)
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            if i > 100000:
+                break
+            guid = line[2]
+            label = np.sign(float(line[-1])) * np.log(abs(float(line[-1])) + 1) / (2 * MAX) + 0.5
+            # if float(line[-1]) < 0:
+            #     label = "-1"
+            # elif float(line[-1]) == 0:
+            #     label = "0"
+            # else:
+            #     label = "1"
+
+            if set_type in ["train", "dev", "test"]:
+                text_a = line[3]
+                text_b = line[4]
+                text_a = self.preprocess(text_a)
+                text_b = self.preprocess(text_b)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
+            elif set_type == "pred":
+                text_a = line[13]
+                text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+
+        return examples
+
+
 class FakeNewsNetProcessor(DataProcessor):
     """Processor for the FakeNewsNetGossipcop data set (My version)."""
 
@@ -1518,6 +1838,79 @@ class wuhan2019ncovProcessor(DataProcessor):
         return examples
 
 
+class COVID19Processor(DataProcessor):
+    """Processor for the FEVER data set (My version)."""
+
+    def get_example_from_tensor_dict(self, tensor_dict):
+        """See base class."""
+        return InputExample(tensor_dict['idx'].numpy(),
+                            tensor_dict['sentence'].numpy().decode('utf-8'),
+                            None,
+                            str(tensor_dict['label'].numpy()))
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {}".format(os.path.join(data_dir, "train.csv")))
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "train.csv"), '"')
+            # + self._read_csv(os.path.join(data_dir, "fact.csv"), '"')
+            , "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "dev.csv"), '"'), "dev")
+
+    def get_pred_examples(self, data_dir):
+        """See base class."""
+        return self._create_examples(
+            self._read_csv(os.path.join(data_dir, "my_test.csv"), '"'), "pred")
+
+    def get_labels(self):
+        """See base class.
+            0: n
+            1: f
+            2: r
+        """
+        return ["0", "1", "2"]
+        # return ['文体娱乐', '社会生活', '军事', '财经商业', '医药健康', '教育考试', '政治', '科技', '疫情']
+
+    def _create_examples(self, lines, set_type):
+        """Creates examples for the training and dev sets."""
+        examples = []
+        for (i, line) in enumerate(lines):
+            if i == 0:
+                continue
+            # if i > 2:
+            #     break
+            guid = line[0]
+            label = ""
+            if set_type == "train":
+                if line[-1] in self.get_labels():
+                    label = line[-1]
+                else:
+                    label = line[-2]
+                    if label == "假":
+                        label = "1"
+                    elif label == "真":
+                        label = "2"
+                    else:
+                        continue
+                text_a = line[1]
+                # text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "dev":
+                label = line[-1]
+                text_a = line[1]
+                # text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+            elif set_type == "pred":
+                text_a = line[1]
+                # text_a = self.preprocess(text_a)
+                examples.append(InputExample(guid=guid, text_a=text_a, text_b=None, label=None))
+        return examples
+
+
 my_tasks_num_labels = {
     "fnews": 2,
     "fnc-1": 3,
@@ -1535,14 +1928,20 @@ my_tasks_num_labels = {
     "fakeddit2waytofakenewsnetgossipcop": 2,
     "fakeddit2waytofakenewsnetpolitifact": 2,
     "fakeddit3waytofever": 3,
+    "fakedditstance": 1,
     "fakenewsnet": 2,
     "fakenewsnetgossipcop": 2,
     "fakenewsnetpolitifact": 2,
     "wuhan2019ncov": 2,
+    "covid19": 3,
     "offenseval2019task1": 2,
     "offenseval2019task2": 2,
     "offenseval2019task3": 3,
     "offenseval2020task1english": 2,
+    "offenseval2020arabic": 2,
+    "offenseval2020danish": 2,
+    "offenseval2020greek": 2,
+    "offenseval2020turkish": 2,
 }
 
 my_processors = {
@@ -1560,14 +1959,20 @@ my_processors = {
     "fakeddit2waytofakenewsnetgossipcop": Fakeddit2wayToFakeNewsNetGossipcopProcessor,
     "fakeddit2waytofakenewsnetpolitifact": Fakeddit2wayToFakeNewsNetPolitifactProcessor,
     "fakeddit3waytofever": Fakeddit3wayToFEVERProcessor,
+    "fakedditstance": FakedditStanceProcessor,
     "fakenewsnet": FakeNewsNetProcessor,
     "fakenewsnetgossipcop": FakeNewsNetGossipcopProcessor,
     "fakenewsnetpolitifact": FakeNewsNetPolitifactProcessor,
     "wuhan2019ncov": wuhan2019ncovProcessor,
+    "covid19": COVID19Processor,
     "offenseval2019task1": OffensEval2019Task1Processor,
     "offenseval2019task2": OffensEval2019Task2Processor,
     "offenseval2019task3": OffensEval2019Task3Processor,
     "offenseval2020task1english": OffensEval2020Task1EnglishProcessor,
+    "offenseval2020arabic": OffensEval2020ArabicProcessor,
+    "offenseval2020danish": OffensEval2020DanishProcessor,
+    "offenseval2020greek": OffensEval2020GreekProcessor,
+    "offenseval2020turkish": OffensEval2020TurkishProcessor,
 }
 
 my_output_modes = {
@@ -1585,12 +1990,18 @@ my_output_modes = {
     "fakeddit2waytofakenewsnetgossipcop": "classification",
     "fakeddit2waytofakenewsnetpolitifact": "classification",
     "fakeddit3waytofever": "classification",
+    "fakedditstance": "regression",
     "fakenewsnet": "classification",
     "fakenewsnetgossipcop": "classification",
     "fakenewsnetpolitifact": "classification",
     "wuhan2019ncov": "classification",
+    "covid19": "classification",
     "offenseval2019task1": "classification",
     "offenseval2019task2": "classification",
     "offenseval2019task3": "classification",
     "offenseval2020task1english": "classification",
+    "offenseval2020arabic": "classification",
+    "offenseval2020danish": "classification",
+    "offenseval2020greek": "classification",
+    "offenseval2020turkish": "classification",
 }

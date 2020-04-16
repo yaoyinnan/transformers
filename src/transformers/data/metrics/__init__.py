@@ -85,6 +85,7 @@ if _has_sklearn:
             "pearson": pearson_corr,
             "spearmanr": spearman_corr,
             "corr": (pearson_corr + spearman_corr) / 2,
+            "score_name": "spearmanr",
         }
 
 
@@ -142,13 +143,20 @@ if _has_sklearn:
                            "fakeddit2waytofakenewsnetgossipcop", "fakeddit2waytofakenewsnetpolitifact",
                            "fakeddit3waytofever"]:
             return classification_report(preds, labels, target_names)
+        elif task_name in ["fakedditstance"]:
+            return pearson_and_spearman(preds, labels)
         elif task_name in ["fakenewsnet", "fakenewsnetgossipcop", "fakenewsnetpolitifact"]:
             return classification_report(preds, labels, target_names)
         elif task_name == "wuhan2019ncov":
             return classification_report(preds, labels, target_names)
+        elif task_name == "covid19":
+            return classification_report(preds, labels, target_names)
         elif task_name in ["offenseval2019task1", "offenseval2019task2", "offenseval2019task3"]:
             return classification_report(preds, labels, target_names)
         elif task_name in ["offenseval2020task1english", "offenseval2020task2english", "offenseval2020task3english"]:
+            return classification_report(preds, labels, target_names)
+        elif task_name in ["offenseval2020arabic", "offenseval2020danish", "offenseval2020greek",
+                           "offenseval2020turkish"]:
             return classification_report(preds, labels, target_names)
         else:
             raise KeyError(task_name)

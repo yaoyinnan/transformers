@@ -133,21 +133,21 @@ class DataProcessor(object):
         return example
 
     @classmethod
-    def _read_tsv(cls, input_file, quotechar=None):
+    def _read_tsv(cls, input_file, quotechar=None, encoding="utf-8-sig"):
         """Reads a tab separated value file."""
-        with open(input_file, "r", encoding="utf-8-sig") as f:
+        with open(input_file, "r", encoding=encoding) as f:
             return list(csv.reader(f, delimiter="\t", quotechar=quotechar))
 
     @classmethod
-    def _read_csv(cls, input_file, quotechar=None):
+    def _read_csv(cls, input_file, quotechar=None, encoding="utf-8-sig"):
         """Reads a tab separated value file."""
-        with open(input_file, "r", encoding="utf-8-sig") as f:
+        with open(input_file, "r", encoding=encoding) as f:
             return list(csv.reader(f, delimiter=",", quotechar=quotechar))
 
     @classmethod
-    def _read_json_normal(cls, input_file):
+    def _read_json_normal(cls, input_file, encoding="utf-8-sig"):
         """Reads a tab separated value file."""
-        with open(input_file, "r", encoding="utf-8-sig") as f:
+        with open(input_file, "r", encoding=encoding) as f:
             reader = json.load(f)
             lines = []
             for index, item in enumerate(reader):
@@ -155,9 +155,9 @@ class DataProcessor(object):
             return lines
 
     @classmethod
-    def _read_json_abnormal(cls, input_file):
+    def _read_json_abnormal(cls, input_file, encoding="utf-8-sig"):
         """Reads a tab separated value file."""
-        with open(input_file, "r", encoding="utf-8-sig") as f:
+        with open(input_file, "r", encoding=encoding) as f:
             reader = f.read().split("\n")
             lines = []
             for line in reader:
