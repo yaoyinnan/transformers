@@ -59,7 +59,7 @@ sklearn==0.0
 tensorboard==2.0.0
 tensorboardX==1.8
 tqdm==4.36.1
-urllib3==1.25.6
+urllib3==1.25.8
 wcwidth==0.1.7
 Werkzeug==0.16.0
 win-inet-pton==1.1.0
