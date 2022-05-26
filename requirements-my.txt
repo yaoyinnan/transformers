@@ -66,7 +66,7 @@ win-inet-pton==1.1.0
 wincertstore==0.2
 wrapt==1.11.2
 zipp==0.6.0
-tensorflow==2.0.0
+tensorflow==2.7.2
 tensorflow-datasets==1.2.0
 tensorflow-estimator==2.0.0
 tensorflow-metadata==0.14.0
